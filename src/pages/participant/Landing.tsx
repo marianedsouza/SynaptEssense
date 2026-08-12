@@ -16,7 +16,7 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
   const [showMethodology, setShowMethodology] = useState(false)
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-se-mist">
+    <div className="relative flex min-h-screen flex-col bg-se-mist">
       <div className="absolute inset-0 bg-gradient-to-b from-white via-se-mist to-se-lavender/60" />
       <NeuralBackground className="opacity-40" />
 

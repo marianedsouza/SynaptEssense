@@ -36,7 +36,7 @@ export function AdminLogin() {
 
       <div className="relative z-10 w-full max-w-md animate-fade-up">
         <div className="flex justify-center">
-          <Logo />
+          <Logo size="lg" />
         </div>
         <div className="card mt-8 p-8">
           <div className="flex items-center gap-3">

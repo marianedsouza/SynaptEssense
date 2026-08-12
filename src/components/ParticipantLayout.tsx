@@ -9,7 +9,7 @@ export function ParticipantLayout({ children }: { children: ReactNode }) {
         <div className="absolute -bottom-40 -left-40 h-[480px] w-[480px] rounded-full bg-se-teal/10 blur-3xl" />
       </div>
       <header className="relative z-10 flex items-center justify-center px-6 py-6">
-        <Logo size="sm" />
+        <Logo size="lg" />
       </header>
       <main className="relative z-10 flex flex-1 items-start justify-center px-4 pb-16 pt-4">
         <div className="w-full max-w-2xl">{children}</div>

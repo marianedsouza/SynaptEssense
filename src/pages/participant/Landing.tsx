@@ -77,10 +77,11 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
       </div>
 
       <footer className="relative z-10 pb-8 text-center">
-        <p className="text-[11px] uppercase tracking-[0.2em] text-ink-muted">
-          A tecnologia organiza dados. A metodologia gera compreens&#227;o.
-          <span className="hidden sm:inline"> O especialista conduz a transforma&#231;&#227;o.</span>
-        </p>
+        <div className="space-y-1 text-[11px] uppercase tracking-[0.2em] text-ink-muted">
+          <p>A tecnologia organiza dados.</p>
+          <p>A metodologia gera compreensão.</p>
+          <p>O especialista conduz a transformação.</p>
+        </div>
         <a
           href="/admin/login"
           className="mt-4 inline-block rounded-full border border-ink-muted/30 bg-transparent px-4 py-1.5 text-[10px] text-ink-muted/60 transition hover:border-ink-muted/50 hover:text-ink-muted"

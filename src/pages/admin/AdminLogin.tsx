@@ -21,8 +21,7 @@ export function AdminLogin() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) {
-      console.error('Supabase login error:', error.message, error.status, error)
-      setError(`Não foi possível entrar. (${error.message})`)
+      setError(`Erro: ${error.message}`)
       return
     }
     navigate('/admin')

@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   FileDown,
-  FileSpreadsheet,
   Save,
   Trash2,
 } from 'lucide-react'
@@ -16,7 +15,7 @@ import {
   upsertAnalystNote,
 } from '../../lib/admin'
 import { AXIS } from '../../lib/axes'
-import { exportParticipantExcel, exportParticipantPdf, groupAnswersByAxis } from '../../lib/export'
+import { exportParticipantPdf, groupAnswersByAxis } from '../../lib/export'
 import { buildQuestionList, participantPosition } from '../../lib/questionUtils'
 import type { AnalystNote, Participant } from '../../lib/types'
 
@@ -114,10 +113,9 @@ export function ParticipantDetail() {
     })
   }, [participant])
 
-  const handleExport = async (kind: 'pdf' | 'excel') => {
+  const handleExport = () => {
     if (!participant) return
-    if (kind === 'pdf') exportParticipantPdf(participant, questions)
-    else await exportParticipantExcel(participant, questions)
+    exportParticipantPdf(participant, questions)
   }
 
   const handleDelete = async () => {
@@ -208,18 +206,11 @@ export function ParticipantDetail() {
             Excluir
           </button>
           <button
-            onClick={() => handleExport('pdf')}
+            onClick={handleExport}
             className="btn-secondary flex-1 !rounded-xl !px-2 !py-2.5 text-[11px] sm:flex-none sm:!px-5 sm:!py-3 sm:!text-sm"
           >
             <FileDown className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             Exportar PDF
-          </button>
-          <button
-            onClick={() => handleExport('excel')}
-            className="btn-secondary flex-1 !rounded-xl !px-2 !py-2.5 text-[11px] sm:flex-none sm:!px-5 sm:!py-3 sm:!text-sm"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-            Exportar Excel
           </button>
         </div>
       </div>

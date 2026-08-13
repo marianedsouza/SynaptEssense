@@ -199,20 +199,26 @@ export function ParticipantDetail() {
             {fmtDate(participant.created_at)}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 rounded-full border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-300"
+            className="flex items-center justify-center gap-1.5 rounded-full border border-red-200 px-2 py-3 text-xs font-semibold uppercase tracking-wide text-red-600 transition hover:bg-red-50 hover:border-red-300 sm:gap-2 sm:px-5 sm:text-sm sm:normal-case sm:tracking-normal"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4 shrink-0" />
             Excluir
           </button>
-          <button onClick={() => handleExport('pdf')} className="btn-secondary !px-5 !py-3">
-            <FileDown className="h-4 w-4" />
+          <button
+            onClick={() => handleExport('pdf')}
+            className="btn-secondary !px-2 !py-3 text-xs sm:!px-5 sm:text-sm"
+          >
+            <FileDown className="h-4 w-4 shrink-0" />
             Exportar PDF
           </button>
-          <button onClick={() => handleExport('excel')} className="btn-primary !px-5 !py-3">
-            <FileSpreadsheet className="h-4 w-4" />
+          <button
+            onClick={() => handleExport('excel')}
+            className="btn-primary !px-2 !py-3 text-xs sm:!px-5 sm:text-sm"
+          >
+            <FileSpreadsheet className="h-4 w-4 shrink-0" />
             Exportar Excel
           </button>
         </div>

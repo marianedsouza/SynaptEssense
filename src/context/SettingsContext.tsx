@@ -22,7 +22,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    fetchSettings().then(setSettings)
+    const load = () => fetchSettings().then(setSettings)
+    load()
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+    document.addEventListener('visibilitychange', refreshOnVisible)
+    window.addEventListener('focus', refreshOnVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', refreshOnVisible)
+      window.removeEventListener('focus', refreshOnVisible)
+    }
   }, [])
 
   const analystProfile: AnalystProfile = {

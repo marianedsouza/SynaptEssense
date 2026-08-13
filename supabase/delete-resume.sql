@@ -38,5 +38,10 @@ begin
 end;
 $$;
 
+-- Por padrão o Postgres libera execução para PUBLIC; removemos para garantir
+-- que apenas quem tiver a role autorizada chame cada função.
+revoke execute on function public.get_participant_by_email(text) from public;
+revoke execute on function public.delete_participant(uuid) from public;
+
 grant execute on function public.get_participant_by_email(text) to anon, authenticated;
 grant execute on function public.delete_participant(uuid) to authenticated;

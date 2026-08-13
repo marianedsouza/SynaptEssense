@@ -309,7 +309,7 @@ export function Dashboard() {
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <Link
                         to={`/admin/participantes/${p.id}`}
-                        className="rounded-full border border-ink/10 px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                        className="rounded-full bg-se-green px-2.5 py-1 text-[11px] font-medium text-white transition hover:bg-se-teal-dark"
                       >
                         Abrir
                       </Link>
@@ -414,7 +414,7 @@ export function Dashboard() {
                           <div className="flex justify-end gap-2">
                             <Link
                               to={`/admin/participantes/${p.id}`}
-                              className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                              className="rounded-full bg-se-green px-3 py-1.5 text-xs font-medium text-white transition hover:bg-se-teal-dark"
                             >
                               Abrir
                             </Link>

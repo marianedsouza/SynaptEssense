@@ -56,4 +56,12 @@
   .text-grad {
     @apply bg-gradient-to-r from-se-teal to-se-violet bg-clip-text text-transparent;
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

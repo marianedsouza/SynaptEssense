@@ -20,14 +20,14 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-se-mist">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-ink/5 bg-white md:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-hidden border-r border-ink/5 bg-white md:flex">
         <div className="px-6 py-6">
           <Logo size="lg" />
         </div>
         <div className="px-6 pb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
           Painel do analista
         </div>
-        <nav className="flex-1 space-y-1 px-4">
+        <nav className="scrollbar-hide flex-1 space-y-1 overflow-y-auto px-4">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
@@ -69,7 +69,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
-          <nav className="mt-2 flex gap-1 overflow-x-auto">
+          <nav className="scrollbar-hide mt-2 flex gap-1 overflow-x-auto">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}

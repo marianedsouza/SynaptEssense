@@ -218,7 +218,7 @@ export function ParticipantDetail() {
         </div>
       </div>
 
-      <div className="mb-6 flex gap-1 overflow-x-auto rounded-2xl bg-white p-1 shadow-soft">
+      <div className="mb-6 flex flex-wrap gap-1 rounded-2xl bg-white p-1 shadow-soft">
         {[
           { key: 'resumo' as Tab, label: 'Resumo' },
           { key: 'respostas' as Tab, label: 'Respostas' },
@@ -228,7 +228,7 @@ export function ParticipantDetail() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+            className={`rounded-xl px-3 py-2 text-[13px] font-medium transition-all sm:px-4 sm:py-2.5 sm:text-sm ${
               tab === t.key
                 ? 'bg-se-lavender text-se-violet-dark'
                 : 'text-ink-soft hover:text-ink'
@@ -256,9 +256,9 @@ export function ParticipantDetail() {
                 ['Tempo de atuação', participant.experience_time],
                 ['Empresa / Marca', participant.organization],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between gap-4">
+                <div key={label} className="flex flex-col gap-0.5 border-b border-ink/5 pb-2 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <dt className="text-ink-muted">{label}</dt>
-                  <dd className="text-right font-medium text-ink">{value || '—'}</dd>
+                  <dd className="font-medium text-ink sm:text-right">{value || '—'}</dd>
                 </div>
               ))}
             </dl>
@@ -287,9 +287,9 @@ export function ParticipantDetail() {
                     : '—',
                 ],
               ].map(([label, value]) => (
-                <div key={label} className="flex justify-between gap-4">
+                <div key={label} className="flex flex-col gap-0.5 border-b border-ink/5 pb-2 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                   <dt className="text-ink-muted">{label}</dt>
-                  <dd className="text-right font-medium text-ink">{value || '—'}</dd>
+                  <dd className="font-medium text-ink sm:text-right">{value || '—'}</dd>
                 </div>
               ))}
             </dl>

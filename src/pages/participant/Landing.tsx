@@ -4,9 +4,9 @@ import {
   ArrowRight,
   BookOpen,
   Check,
-  ChevronDown,
   Link2,
   MessageCircle,
+  Share2,
   X,
 } from 'lucide-react'
 import { NeuralBackground } from '../../components/NeuralBackground'
@@ -26,12 +26,7 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
   const navigate = useNavigate()
   const [showMethodology, setShowMethodology] = useState(false)
   const [copied, setCopied] = useState(false)
-
-  const scrollToShare = () => {
-    document
-      .getElementById('compartilhar')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  const [shareOpen, setShareOpen] = useState(false)
 
   const handleWhatsApp = () => {
     const url = `https://wa.me/?text=${encodeURIComponent(`${SHARE_MESSAGE} ${window.location.href}`)}`
@@ -84,14 +79,6 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
               <p className="relative font-display text-xl font-bold italic leading-relaxed bg-gradient-to-r from-se-teal via-se-violet to-se-teal-light bg-clip-text text-transparent animate-[shimmer_6s_ease-in-out_infinite] [background-size:200%_100%] md:text-2xl">
                 {`\u201C${heroMessage}\u201D`}
               </p>
-              <button
-                onClick={scrollToShare}
-                className="relative mx-auto mt-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-se-violet/80 transition hover:text-se-violet md:hidden"
-                aria-label="Rolar até os botões de compartilhar"
-              >
-                Compartilhar
-                <ChevronDown className="h-4 w-4 animate-bounce" />
-              </button>
             </div>
           </div>
 
@@ -117,24 +104,6 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
               Conhe&#231;a a metodologia
             </button>
           </div>
-
-          <div
-            id="compartilhar"
-            className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center scroll-mt-6"
-          >
-            <button onClick={handleWhatsApp} className="btn-secondary !px-6 !py-3">
-              <MessageCircle className="h-4 w-4" />
-              Compartilhar no WhatsApp
-            </button>
-            <button onClick={handleCopy} className="btn-secondary !px-6 !py-3">
-              {copied ? (
-                <Check className="h-4 w-4 text-green-600" />
-              ) : (
-                <Link2 className="h-4 w-4" />
-              )}
-              {copied ? 'Link copiado!' : 'Copiar link'}
-            </button>
-          </div>
         </div>
       </main>
 
@@ -155,6 +124,38 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
           &#193;rea administrativa
         </a>
       </footer>
+
+      <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
+        {shareOpen && (
+          <>
+            <button
+              onClick={handleWhatsApp}
+              className="flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow-lift transition hover:brightness-110"
+            >
+              <MessageCircle className="h-4 w-4" />
+              WhatsApp
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 rounded-full border border-ink/10 bg-white px-4 py-2.5 text-sm font-medium text-ink shadow-lift transition hover:border-se-violet"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Link2 className="h-4 w-4" />
+              )}
+              {copied ? 'Link copiado!' : 'Copiar link'}
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => setShareOpen((open) => !open)}
+          className="grid h-12 w-12 place-items-center rounded-full border border-ink/10 bg-white/80 text-se-violet shadow-lift backdrop-blur transition hover:bg-white"
+          aria-label={shareOpen ? 'Fechar compartilhamento' : 'Compartilhar'}
+        >
+          {shareOpen ? <X className="h-5 w-5" /> : <Share2 className="h-5 w-5" />}
+        </button>
+      </div>
 
       {showMethodology && (
         <div

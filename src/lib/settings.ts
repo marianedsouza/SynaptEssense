@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   analyst_title: 'Criadora da metodologia SynaptEssence360®',
   analyst_photo: '',
   analyst_bio:
-    'Especialista responsável pela condução da análise e devolutiva. Toda transformação começa quando novas conexões são criadas.',
+    'Responsável pela condução da análise com devolutiva da jornada de desenvolvimento da Identidade de Impacto com Essência.',
   hero_message: 'Toda transformação começa quando novas conexões são criadas.',
   closing_message:
     'Toda transformação começa quando novas conexões são criadas.',

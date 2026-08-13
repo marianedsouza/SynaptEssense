@@ -133,6 +133,11 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
 
             <div className="mt-6 border-t border-ink/5 pt-5">
               <AnalystCard profile={analystProfile} compact />
+              <p className="mt-4 text-sm leading-relaxed text-ink-muted">
+                Um processo de desenvolvimento constru&#237;do a partir da an&#225;lise
+                individual do SynaptEssence360&#174;, que transforma autoconhecimento
+                em posicionamento, express&#227;o e impacto com ess&#234;ncia.
+              </p>
             </div>
           </div>
         </div>

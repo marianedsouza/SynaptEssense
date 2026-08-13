@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   BrainCircuit,
   FileDown,
   FileSpreadsheet,
   Save,
+  Trash2,
 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
-import { fetchAnalystNote, fetchParticipantById, upsertAnalystNote } from '../../lib/admin'
+import {
+  deleteParticipant,
+  fetchAnalystNote,
+  fetchParticipantById,
+  upsertAnalystNote,
+} from '../../lib/admin'
 import { AXIS } from '../../lib/axes'
 import { exportParticipantExcel, exportParticipantPdf, groupAnswersByAxis } from '../../lib/export'
 import { buildQuestionList, participantPosition } from '../../lib/questionUtils'
@@ -53,6 +59,7 @@ const NOTE_FIELDS: { key: keyof Omit<AnalystNote, 'id' | 'participant_id' | 'upd
 
 export function ParticipantDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>('resumo')
@@ -111,6 +118,20 @@ export function ParticipantDetail() {
     if (!participant) return
     if (kind === 'pdf') exportParticipantPdf(participant, questions)
     else await exportParticipantExcel(participant, questions)
+  }
+
+  const handleDelete = async () => {
+    if (!participant) return
+    const confirmed = window.confirm(
+      `Excluir ${participant.name || participant.email || 'este participante'}? Essa ação não pode ser desfeita.`,
+    )
+    if (!confirmed) return
+    const res = await deleteParticipant(participant.id)
+    if (!res.ok) {
+      window.alert(`Não foi possível excluir: ${res.error ?? 'erro desconhecido'}`)
+      return
+    }
+    navigate('/admin')
   }
 
   const position = participant
@@ -179,6 +200,13 @@ export function ParticipantDetail() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleDelete}
+            className="flex items-center gap-2 rounded-full border border-red-200 px-5 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 hover:border-red-300"
+          >
+            <Trash2 className="h-4 w-4" />
+            Excluir
+          </button>
           <button onClick={() => handleExport('pdf')} className="btn-secondary !px-5 !py-3">
             <FileDown className="h-4 w-4" />
             Exportar PDF

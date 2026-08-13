@@ -12,10 +12,13 @@ import {
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { Logo } from '../../components/Logo'
 import { AnalystCard } from '../../components/AnalystCard'
+import { getParticipantByEmail, setSessionId } from '../../lib/participants'
 import type { AnalystProfile } from '../../lib/types'
 
 const SHARE_MESSAGE =
   'SynaptEssence360® — Plataforma de Tecnologia Social para o Desenvolvimento Humano Integral. Toda transformação começa quando novas conexões são criadas. Faça o seu levantamento estratégico:'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface LandingProps {
   analystProfile?: AnalystProfile
@@ -27,6 +30,42 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
   const [showMethodology, setShowMethodology] = useState(false)
   const [copied, setCopied] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [showResume, setShowResume] = useState(false)
+  const [resumeEmail, setResumeEmail] = useState('')
+  const [resumeMessage, setResumeMessage] = useState<{
+    kind: 'error' | 'concluded'
+    text: string
+  } | null>(null)
+  const [resumeLoading, setResumeLoading] = useState(false)
+
+  const handleResume = async () => {
+    const email = resumeEmail.trim()
+    if (!EMAIL_RE.test(email)) {
+      setResumeMessage({ kind: 'error', text: 'Informe um e-mail válido.' })
+      return
+    }
+    setResumeLoading(true)
+    setResumeMessage(null)
+    const p = await getParticipantByEmail(email)
+    setResumeLoading(false)
+    if (!p) {
+      setResumeMessage({
+        kind: 'error',
+        text:
+          'Nenhum levantamento encontrado com esse e-mail. Se ainda não começou, inicie um novo.',
+      })
+      return
+    }
+    if (p.status === 'concluido') {
+      setResumeMessage({
+        kind: 'concluded',
+        text: 'Este levantamento já foi concluído. Obrigada!',
+      })
+      return
+    }
+    setSessionId(p.id)
+    navigate('/levantamento')
+  }
 
   const handleWhatsApp = () => {
     const url = `https://wa.me/?text=${encodeURIComponent(`${SHARE_MESSAGE} ${window.location.href}`)}`
@@ -103,6 +142,73 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
               <BookOpen className="h-4 w-4" />
               Conhe&#231;a a metodologia
             </button>
+          </div>
+
+          <div className="mt-6">
+            {!showResume ? (
+              <button
+                onClick={() => setShowResume(true)}
+                className="text-xs font-semibold text-se-violet underline-offset-4 transition hover:underline"
+              >
+                J&#225; comecei meu levantamento &mdash; continuar de onde parei
+              </button>
+            ) : (
+              <div className="card mx-auto max-w-sm p-4 text-left animate-fade-up">
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-se-violet">
+                    Continuar levantamento
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowResume(false)
+                      setResumeEmail('')
+                      setResumeMessage(null)
+                    }}
+                    className="rounded-full p-1 text-ink-muted transition hover:bg-se-mist hover:text-ink"
+                    aria-label="Fechar"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+                  Digite o mesmo e-mail usado ao iniciar para retomar de onde
+                  parou.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    type="email"
+                    value={resumeEmail}
+                    onChange={(e) => {
+                      setResumeEmail(e.target.value)
+                      setResumeMessage(null)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleResume()
+                    }}
+                    placeholder="seu@email.com"
+                    className="w-full min-w-0 rounded-full border border-ink/10 bg-white px-4 py-2.5 text-sm text-ink outline-none transition focus:border-se-violet"
+                  />
+                  <button
+                    onClick={handleResume}
+                    disabled={resumeLoading || !resumeEmail.trim()}
+                    className="btn-primary shrink-0 !px-4 !py-2 text-sm"
+                  >
+                    {resumeLoading ? 'Buscando...' : 'Continuar'}
+                  </button>
+                </div>
+                {resumeMessage && (
+                  <p
+                    className={`mt-2 text-xs font-medium ${
+                      resumeMessage.kind === 'error'
+                        ? 'text-red-600'
+                        : 'text-se-teal-dark'
+                    }`}
+                  >
+                    {resumeMessage.text}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>

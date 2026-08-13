@@ -58,25 +58,25 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex flex-1 flex-col md:pl-64">
-        <header className="sticky top-0 z-20 border-b border-ink/5 bg-white/85 px-5 py-4 backdrop-blur-md md:hidden">
+        <header className="sticky top-0 z-20 border-b border-ink/5 bg-white/85 px-4 py-2.5 backdrop-blur-md md:hidden">
           <div className="flex items-center justify-between">
-            <Logo size="md" />
+            <Logo size="sm" />
             <button
               onClick={handleLogout}
-              className="rounded-full p-2 text-ink-muted hover:bg-se-mist"
+              className="rounded-full p-1.5 text-ink-muted hover:bg-se-mist"
               aria-label="Sair"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
-          <nav className="mt-3 flex gap-1 overflow-x-auto">
+          <nav className="mt-2 flex gap-1 overflow-x-auto">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-medium transition-all ${
+                  `flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${
                     isActive
                       ? 'bg-se-lavender text-se-violet-dark'
                       : 'text-ink-soft hover:text-ink'
@@ -89,7 +89,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
         </header>
-        <main className="flex-1 px-5 py-8 md:px-10 md:py-10">{children}</main>
+        <main className="flex-1 px-4 py-4 md:px-10 md:py-10">{children}</main>
       </div>
     </div>
   )

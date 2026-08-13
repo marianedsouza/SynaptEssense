@@ -10,6 +10,14 @@ export async function fetchParticipants(): Promise<Participant[]> {
   return (data ?? []) as Participant[]
 }
 
+export async function deleteParticipant(
+  id: string,
+): Promise<{ ok: boolean; error: string | null }> {
+  const { error } = await supabase.rpc('delete_participant', { p_id: id })
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, error: null }
+}
+
 export async function fetchParticipantById(id: string): Promise<Participant | null> {
   const { data, error } = await supabase
     .from('participants')

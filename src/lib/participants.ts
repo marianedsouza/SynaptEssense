@@ -58,6 +58,16 @@ export async function fetchParticipant(
   return data as unknown as Participant | null
 }
 
+export async function getParticipantByEmail(
+  email: string,
+): Promise<Participant | null> {
+  const { data, error } = await supabase.rpc('get_participant_by_email', {
+    p_email: email,
+  })
+  if (error) return null
+  return data as unknown as Participant | null
+}
+
 export async function saveAnswers(
   id: string,
   answers: ParticipantAnswers,

@@ -128,12 +128,7 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
                 lideran&#231;a, prop&#243;sito, atua&#231;&#227;o e potencialidades para subsidiar
                 uma an&#225;lise personalizada.
               </p>
-              <p>
-                O question&#225;rio &#233; apenas o in&#237;cio da jornada. Suas respostas
-                passam por uma an&#225;lise criteriosa, realizada por uma especialista
-                da metodologia, e o resultado &#233; compartilhado em uma reuni&#227;o de
-                devolutiva.
-              </p>
+              <p>O question&#225;rio &#233; apenas o in&#237;cio da jornada.</p>
             </div>
 
             <div className="mt-6 border-t border-ink/5 pt-5">

@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
-  BrainCircuit,
   FileDown,
   FileSpreadsheet,
   Save,
   Trash2,
 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
+import { IntelligenceReport } from '../../components/admin/IntelligenceReport'
 import {
   deleteParticipant,
   fetchAnalystNote,
@@ -396,30 +396,7 @@ export function ParticipantDetail() {
       )}
 
       {tab === 'inteligencia' && (
-        <div className="card p-5 md:p-8">
-          <div className="flex items-center gap-3">
-            <div className="bg-grad grid h-12 w-12 place-items-center rounded-2xl">
-              <BrainCircuit className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="font-display text-xl font-semibold text-ink">
-                Inteligência SynaptEssence360®
-              </h2>
-              <p className="text-sm text-ink-muted">Módulo em desenvolvimento</p>
-            </div>
-          </div>
-          <div className="mt-6 rounded-2xl border border-dashed border-se-violet/30 bg-se-lavender/30 p-6 text-center">
-            <p className="text-sm leading-relaxed text-ink-soft">
-              Nesta primeira versão, os cálculos arquetípicos ainda não são
-              executados. A arquitetura já está preparada para receber,
-              futuramente, o motor de indicadores, arquétipos, correlações e a
-              análise multidimensional.
-            </p>
-          </div>
-          <p className="mt-6 text-center text-xs uppercase tracking-[0.2em] text-ink-muted">
-            A tecnologia organiza dados. A metodologia gera compreensão.
-          </p>
-        </div>
+        <IntelligenceReport participant={participant} questions={questions} />
       )}
     </AdminLayout>
   )

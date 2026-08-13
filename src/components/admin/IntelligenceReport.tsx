@@ -1,5 +1,14 @@
 import { useMemo } from 'react'
-import { AlertCircle, BrainCircuit, ChevronRight, Quote, Sparkles } from 'lucide-react'
+import {
+  AlertCircle,
+  BookOpen,
+  BrainCircuit,
+  ChevronRight,
+  Quote,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 import {
   ARCHETYPE_META,
   buildIntelligenceReport,
@@ -12,6 +21,12 @@ import type { Participant, Question } from '../../lib/types'
 interface IntelligenceReportProps {
   participant: Participant
   questions: Question[]
+}
+
+const CONFIDENCE_BADGE: Record<string, string> = {
+  alta: 'bg-se-green-soft text-se-green',
+  media: 'bg-amber-50 text-amber-700',
+  baixa: 'bg-red-50 text-red-600',
 }
 
 function scoreRow(score: ArchetypeScore, rank: number) {
@@ -65,9 +80,7 @@ function layerCard(layer: LayerResult, index: number) {
         </span>
       </div>
       <div className="mt-3 flex items-center gap-2">
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badge}`}
-        >
+        <span className={`rounded-full px-3 py-1 text-sm font-semibold ${meta.badge}`}>
           {meta.label}
         </span>
       </div>
@@ -81,9 +94,7 @@ function layerCard(layer: LayerResult, index: number) {
           </span>
         ))}
       </div>
-      {layer.note && (
-        <p className="mt-3 text-xs italic text-ink-muted">{layer.note}</p>
-      )}
+      {layer.note && <p className="mt-3 text-xs italic text-ink-muted">{layer.note}</p>}
       {layer.basis.length > 0 && (
         <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
           Base: {layer.basis.join(' · ')}
@@ -99,10 +110,7 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
     [participant, questions],
   )
 
-  const ranked = [...report.scores]
-    .filter((s) => s.answered > 0)
-    .sort(compareScores)
-
+  const ranked = [...report.scores].filter((s) => s.answered > 0).sort(compareScores)
   const answeredAxes = report.axes.filter((a) => a.answered > 0)
 
   return (
@@ -117,13 +125,16 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
               Inteligência SynaptEssence360®
             </h2>
             <p className="text-sm text-white/80">
-              Mapeamento arquetípico de {report.name}
+              Relatório de análise comportamental · {report.name}
             </p>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2 text-xs">
           <span className="rounded-full bg-white/15 px-3 py-1">
             {report.answeredLikert} de {report.totalLikert} itens respondidos
+          </span>
+          <span className={`rounded-full px-3 py-1 ${CONFIDENCE_BADGE[report.confidence] ?? 'bg-white/15'}`}>
+            Confiança {report.confidence}
           </span>
           {!report.completed && (
             <span className="rounded-full bg-white/15 px-3 py-1">
@@ -132,11 +143,11 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
           )}
         </div>
         <p className="mt-4 text-xs leading-relaxed text-white/75">
-          Resultado calculado de forma algorítmica a partir das respostas
-          registradas, seguindo a base de Mapeamento Arquetípico (Jung, Campbell,
-          Pearson, Banzhaf e Nichols). É um indicador de autopercepção, não um
-          diagnóstico. A interpretação clínica final cabe ao profissional
-          responsável.
+          Elaborado por um motor de decisão estruturado: cada pergunta contribui
+          com pesos a múltiplos arquétipos; os índices são somados, normalizados
+          em percentual e ajustados em até ±5 pontos por evidência textual nas
+          respostas abertas. Base metodológica: Carl Jung, Carol Pearson, Joseph
+          Campbell, Hajo Banzhaf e Sallie Nichols.
         </p>
       </div>
 
@@ -152,10 +163,29 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
         <>
           <section>
             <h3 className="font-display text-lg font-semibold text-ink">
+              Resumo executivo
+            </h3>
+            <p className="mb-4 mt-1 text-sm text-ink-muted">
+              Síntese objetiva derivada dos índices calculados.
+            </p>
+            <div className="rounded-2xl border border-ink/5 bg-white p-5">
+              <p className="text-sm leading-relaxed text-ink-soft">
+                {report.executiveSummary}
+              </p>
+              {report.confidence !== 'alta' && (
+                <p className="mt-3 text-xs italic text-ink-muted">
+                  Atenção à confiança: {report.confidenceReason}
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="font-display text-lg font-semibold text-ink">
               Mapa arquetípico
             </h3>
             <p className="mb-4 mt-1 text-sm text-ink-muted">
-              As cinco camadas do método, calculadas a partir das respostas.
+              As camadas do método, calculadas a partir dos índices ponderados.
             </p>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {report.layers.map((layer, i) => layerCard(layer, i))}
@@ -164,11 +194,77 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
 
           <section>
             <h3 className="font-display text-lg font-semibold text-ink">
+              Metodologia aplicada
+            </h3>
+            <p className="mb-4 mt-1 text-sm text-ink-muted">
+              Como este relatório foi calculado.
+            </p>
+            <div className="space-y-3">
+              <div className="flex gap-3 rounded-2xl border border-ink/5 bg-white p-4">
+                <Scale className="mt-0.5 h-4 w-4 shrink-0 text-se-violet/60" />
+                <div>
+                  <p className="text-sm font-semibold text-ink">Processamento</p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-ink-soft">
+                    Cada pergunta likert soma pesos (3, 2 ou 1) aos arquétipos
+                    correspondentes, multiplicados pela escala de 1 a 5. Os totais
+                    são normalizados para percentual do máximo possível e os
+                    maiores índices compõem as camadas do mapa.
+                  </p>
+                </div>
+              </div>
+              {report.adjustments.length > 0 && (
+                <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">
+                      Ajuste por evidência textual nas respostas abertas
+                    </p>
+                    <ul className="mt-1 space-y-1 text-sm leading-relaxed text-amber-900/80">
+                      {report.adjustments.map((a) => (
+                        <li key={a.archetypeId}>
+                          <strong>{a.archetypeLabel}</strong> {a.delta > 0 ? '+' : ''}
+                          {a.delta} pontos — {a.evidence}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-3 rounded-2xl border border-ink/5 bg-white p-4">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-se-violet/60" />
+                <div>
+                  <p className="text-sm font-semibold text-ink">Regras do motor</p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-ink-soft">
+                    Não diagnostica transtornos; não inventa informações; quando um
+                    dado está ausente, registra como não disponível; respostas
+                    abertas são preservadas na íntegra e nunca substituídas por
+                    interpretação; a decisão interpretativa final é do profissional
+                    responsável.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 rounded-2xl border border-ink/5 bg-white p-4">
+                <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-se-violet/60" />
+                <div>
+                  <p className="text-sm font-semibold text-ink">
+                    Referências do método
+                  </p>
+                  <p className="mt-0.5 text-sm leading-relaxed text-ink-soft">
+                    Carl Jung (arquétipos, sombra, individuação) · Carol Pearson
+                    (os 12 arquétipos) · Joseph Campbell (jornada do herói) ·
+                    Hajo Banzhaf e Sallie Nichols (jornada arquetípica).
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="font-display text-lg font-semibold text-ink">
               1 · Síntese geral dos resultados
             </h3>
             <p className="mb-4 mt-1 text-sm text-ink-muted">
-              Pontuação de cada arquétipo a partir das respostas de escolha.
-              Quanto maior o percentual, mais presente na autopercepção.
+              Índices ponderados e normalizados, com ajuste textual aplicado.
             </p>
             <div className="space-y-3.5">
               {ranked.map((s, i) => scoreRow(s, i + 1))}
@@ -180,8 +276,8 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
               2 · Resultados por eixo
             </h3>
             <p className="mb-4 mt-1 text-sm text-ink-muted">
-              Média das respostas likert em cada eixo do questionário (escala de
-              1 a 5).
+              Média das respostas likert em cada eixo do questionário (escala de 1
+              a 5).
             </p>
             {answeredAxes.length === 0 ? (
               <p className="text-sm text-ink-muted">Sem respostas registradas.</p>
@@ -215,8 +311,8 @@ export function IntelligenceReport({ participant, questions }: IntelligenceRepor
             </h3>
             <p className="mb-4 mt-1 text-sm text-ink-muted">
               Conteúdo escrito pelo participante, transcrito na íntegra, com a
-              pergunta correspondente. Sem resumos nem substituições — material
-              primário para a análise qualitativa clínica.
+              pergunta correspondente. Material primário para a análise
+              qualitativa clínica.
             </p>
             <div className="space-y-3">
               {report.open.map((item) => (

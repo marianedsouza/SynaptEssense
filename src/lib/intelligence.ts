@@ -129,6 +129,89 @@ export const PERSON_AXES = [
 export const POTENCIA_AXES = ['potential']
 export const EVOLUCAO_AXES = ['purpose', 'development']
 
+type Weights = Partial<Record<ArchetypeId, number>>
+
+const q = (id: string, weights: Weights): [string, Weights] => [id, weights]
+
+const WEIGHT_MAP: Record<string, Weights> = Object.fromEntries([
+  // ── IDENTIDADE ──
+  q('id_01', { rebel: 3, warrior: 1 }),
+  q('id_02', { sage: 3, ruler: 1 }),
+  q('id_03', { innocent: 2, sage: 2 }),
+  q('id_04', { explorer: 3, jester: 1 }),
+  q('id_05', { creator: 3, explorer: 1 }),
+  q('id_06', { ruler: 3, warrior: 2 }),
+  q('id_07', { caregiver: 3, lover: 1 }),
+  q('id_08', { magician: 3, explorer: 2 }),
+  q('id_09', { jester: 3, innocent: 1 }),
+  q('id_10', { lover: 3, caregiver: 1 }),
+  // ── RELACIONAMENTOS ──
+  q('rl_01', { lover: 3, explorer: 1 }),
+  q('rl_02', { caregiver: 3, lover: 1 }),
+  q('rl_03', { orphan: 3, lover: 1 }),
+  q('rl_04', { orphan: 3, caregiver: 1 }),
+  q('rl_05', { lover: 3, jester: 1 }),
+  q('rl_06', { warrior: 3, ruler: 2 }),
+  q('rl_07', { caregiver: 3, ruler: 1 }),
+  q('rl_08', { explorer: 3, sage: 1 }),
+  q('rl_09', { sage: 3, lover: 2 }),
+  // ── LIDERANÇA E AUTONOMIA ──
+  q('ld_01', { ruler: 3, warrior: 2 }),
+  q('ld_02', { warrior: 3, ruler: 2, rebel: 1 }),
+  q('ld_03', { warrior: 3, ruler: 1 }),
+  q('ld_04', { ruler: 3, magician: 1, caregiver: 1 }),
+  q('ld_05', { ruler: 3, warrior: 1 }),
+  q('ld_06', { warrior: 3, ruler: 1 }),
+  q('ld_07', { explorer: 3, sage: 1 }),
+  q('ld_08', { ruler: 3 }),
+  q('ld_09', { sage: 3, caregiver: 2 }),
+  // ── PROPÓSITO ──
+  q('pp_01', { magician: 3, sage: 1 }),
+  q('pp_02', { magician: 3, caregiver: 1 }),
+  q('pp_03', { creator: 3, ruler: 2 }),
+  q('pp_04', { sage: 3, innocent: 1 }),
+  q('pp_05', { explorer: 3, magician: 1 }),
+  q('pp_06', { caregiver: 3, magician: 1 }),
+  q('pp_07', { warrior: 3, magician: 1 }),
+  // ── ATUAÇÃO E CARREIRA ──
+  q('cr_01', { explorer: 3, rebel: 1 }),
+  q('cr_02', { ruler: 3, sage: 2 }),
+  q('cr_03', { creator: 3, jester: 1 }),
+  q('cr_04', { warrior: 3, sage: 2 }),
+  q('cr_05', { explorer: 3, jester: 2 }),
+  q('cr_06', { warrior: 3, creator: 2 }),
+  q('cr_07', { creator: 3, warrior: 1 }),
+  q('cr_08', { ruler: 3, sage: 1 }),
+  // ── COMUNICAÇÃO ──
+  q('cm_01', { sage: 3, ruler: 1 }),
+  q('cm_02', { warrior: 3, ruler: 1 }),
+  q('cm_03', { ruler: 3, warrior: 1 }),
+  q('cm_04', { caregiver: 3, lover: 1 }),
+  q('cm_05', { warrior: 3, rebel: 1 }),
+  q('cm_06', { jester: 3, lover: 1 }),
+  // ── DESAFIOS (positivos) ──
+  q('dc_01', { warrior: 3, sage: 1 }),
+  q('dc_02', { explorer: 3, jester: 1 }),
+  q('dc_04', { warrior: 3, creator: 1 }),
+  // ── POTENCIALIDADES ──
+  q('pt_01', { magician: 3, explorer: 1 }),
+  q('pt_02', { explorer: 3, sage: 1 }),
+  q('pt_03', { ruler: 3, magician: 1 }),
+  q('pt_04', { magician: 3, sage: 1 }),
+  q('pt_05', { magician: 3, lover: 1 }),
+  q('pt_06', { creator: 3, warrior: 1 }),
+  q('pt_07', { jester: 3, explorer: 1 }),
+  // ── DESENVOLVIMENTO ──
+  q('dv_01', { sage: 3, magician: 1 }),
+  q('dv_02', { sage: 3, magician: 2 }),
+  q('dv_03', { warrior: 3, ruler: 1 }),
+  q('dv_04', { sage: 3 }),
+  q('dv_05', { magician: 3, creator: 1 }),
+  q('dv_06', { ruler: 3, sage: 1 }),
+  q('dv_07', { innocent: 3, sage: 1 }),
+  q('dv_08', { magician: 3, jester: 1 }),
+])
+
 interface ShadowItem {
   id: string
   sombra: ArchetypeId
@@ -144,24 +227,47 @@ const SHADOW_ITEMS: Record<string, ShadowItem> = {
   dc_09: { id: 'dc_09', sombra: 'lover', ferido: 'lover' },
 }
 
+const OPEN_KEYS: Record<ArchetypeId, string[]> = {
+  rebel: ['questionar', 'questiono', 'padrão', 'regra', 'revolução', 'romper', 'contra a', 'mudar o'],
+  sage: ['conhecimento', 'aprendiz', 'aprender', 'compreens', 'entender', 'estudar', 'clareza', 'método', 'consciência', 'pesquisa'],
+  innocent: ['simplicidade', 'esperança', 'fé', 'confiar', 'otimismo', 'puro', 'confiança'],
+  explorer: ['liberdade', 'independ', 'viajar', 'explorar', 'descobrir', 'aventura', 'horizont', 'novas possibilidades', 'expans'],
+  creator: ['criar', 'criativo', 'criatividade', 'inovar', 'inovação', 'construir', 'ideias novas', 'original', 'empreender'],
+  ruler: ['liderar', 'liderança', 'conduzir', 'organizar', 'decisão', 'decidir', 'sucesso', 'responsabilidade', 'equipe', 'gestão', 'impactar'],
+  caregiver: ['cuidar', 'cuidado', 'ajudar', 'ajuda', 'acolher', 'acolhimento', 'acolhedor', 'proteger', 'proteção', 'apoiar', 'apoio', 'pessoas', 'família', 'amor'],
+  magician: ['transformar', 'transformação', 'propósito', 'intuição', 'cura', 'evoluir', 'evolução', 'espiritual', 'renascer', 'mudança', 'despertar'],
+  jester: ['leveza', 'humor', 'alegria', 'rir', 'espontâneo', 'brincar', 'felicidade', 'lúdico', 'leve'],
+  lover: ['conexão', 'conectar', 'afeto', 'sentimento', 'belez', 'encant', 'sensibilidade', 'relacionamento', 'vínculo', 'parceria', 'com amor'],
+  warrior: ['coragem', 'força', 'disciplina', 'determinação', 'persistência', 'foco', 'superar', 'superação', 'desafio', 'lutar', 'vencer', 'resiliência'],
+  orphan: ['pertencer', 'pertencimento', 'solidão', 'abandono', 'rejeição', 'desamparo', 'aceitação', 'grupo', 'ajuda'],
+}
+
+const NEGATIVE_HINTS = [
+  'não',
+  'nunca',
+  'evito',
+  'evitar',
+  'tenho dificuldade',
+  'tenho medo',
+  'dificuldade',
+  'medo',
+  'não gosto',
+  'não consigo',
+  'detesto',
+  'longe de mim',
+]
+
 function toNumber(value: string | string[] | undefined): number | null {
   if (typeof value !== 'string') return null
   const n = Number(value)
   return Number.isFinite(n) && n >= 1 && n <= 5 ? n : null
 }
 
-function percentile(values: number[]): number {
-  if (values.length === 0) return 0
-  const mean = values.reduce((a, b) => a + b, 0) / values.length
-  return Math.round((mean / 5) * 100)
-}
-
-export function compareScores(a: ArchetypeScore, b: ArchetypeScore): number {
-  return (
-    b.percentage - a.percentage ||
-    b.answered - a.answered ||
-    a.label.localeCompare(b.label)
-  )
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
 }
 
 export interface ArchetypeScore {
@@ -172,35 +278,95 @@ export interface ArchetypeScore {
   total: number
 }
 
-export function archetypeScores(
+export function compareScores(a: ArchetypeScore, b: ArchetypeScore): number {
+  return (
+    b.percentage - a.percentage ||
+    b.answered - a.answered ||
+    a.label.localeCompare(b.label)
+  )
+}
+
+export function weightedArchetypeScores(
   questions: Question[],
   answers: Participant['answers'] | null | undefined,
   axes: string[] = PERSON_AXES,
 ): ArchetypeScore[] {
-  const map = new Map<ArchetypeId, { values: number[]; total: number }>()
-  for (const id of ARCHETYPE_IDS) map.set(id, { values: [], total: 0 })
+  const map = new Map<ArchetypeId, { sum: number; max: number; answered: number; total: number }>()
+  for (const id of ARCHETYPE_IDS) map.set(id, { sum: 0, max: 0, answered: 0, total: 0 })
 
-  for (const q of questions) {
-    if (q.module !== 'person' || q.type !== 'likert' || q.archetype === 'shadow') continue
-    if (axes.length > 0 && !axes.includes(q.axis)) continue
-    const archetype = q.archetype as ArchetypeId | undefined
-    if (!archetype || !map.has(archetype)) continue
-    const entry = map.get(archetype)!
-    entry.total += 1
-    const n = toNumber(answers?.[q.id])
-    if (n !== null) entry.values.push(n)
+  for (const qq of questions) {
+    if (qq.module !== 'person' || qq.type !== 'likert' || qq.archetype === 'shadow') continue
+    if (axes.length > 0 && !axes.includes(qq.axis)) continue
+    const weights = WEIGHT_MAP[qq.id]
+    if (!weights) continue
+    const value = toNumber(answers?.[qq.id])
+    for (const [arch, w] of Object.entries(weights) as [ArchetypeId, number][]) {
+      const entry = map.get(arch)!
+      entry.total += 1
+      if (value !== null) {
+        entry.sum += w * value
+        entry.max += w * 5
+        entry.answered += 1
+      }
+    }
   }
 
   return ARCHETYPE_IDS.map((id) => {
     const entry = map.get(id)!
+    const percentage =
+      entry.max > 0 ? Math.round((entry.sum / entry.max) * 100) : 0
     return {
       archetypeId: id,
       label: ARCHETYPE_META[id].label,
-      percentage: percentile(entry.values),
-      answered: entry.values.length,
+      percentage,
+      answered: entry.answered,
       total: entry.total,
     }
   })
+}
+
+export interface OpenAdjustment {
+  archetypeId: ArchetypeId
+  archetypeLabel: string
+  delta: number
+  evidence: string
+}
+
+export function openEvidenceAdjustments(
+  openAnswers: { provided: boolean; answer: string }[],
+  scores: ArchetypeScore[],
+): OpenAdjustment[] {
+  const texts = openAnswers.filter((o) => o.provided && o.answer.trim()).map((o) => normalize(o.answer))
+  const adjustments: OpenAdjustment[] = []
+
+  for (const score of scores) {
+    const keys = OPEN_KEYS[score.archetypeId].map(normalize)
+    let positive = 0
+    let negative = 0
+    for (const text of texts) {
+      for (const key of keys) {
+        const pattern = new RegExp(key, 'g')
+        const matches = text.match(pattern)
+        if (matches) positive += matches.length
+      }
+      if (keys.some((key) => text.includes(key)) && NEGATIVE_HINTS.some((hint) => text.includes(normalize(hint)))) {
+        negative += 1
+      }
+    }
+    const delta = (positive >= 2 ? 5 : 0) + (negative >= 1 ? -5 : 0)
+    if (delta !== 0) {
+      adjustments.push({
+        archetypeId: score.archetypeId,
+        archetypeLabel: score.label,
+        delta,
+        evidence:
+          delta > 0
+            ? `Evidência textual forte (${positive} menções) nas respostas abertas.`
+            : `Evidência textual de baixa presença (${negative} resposta(s) com negação).`,
+      })
+    }
+  }
+  return adjustments
 }
 
 export interface LayerResult {
@@ -228,16 +394,22 @@ function shadowScored(
 ): { groups: Map<ArchetypeId, { values: number[] }>; items: ShadowScore[] } {
   const groups = new Map<ArchetypeId, { values: number[] }>()
   const items: ShadowScore[] = []
-  for (const q of questions) {
-    const item = SHADOW_ITEMS[q.id]
+  for (const qq of questions) {
+    const item = SHADOW_ITEMS[qq.id]
     if (!item) continue
     const target = key === 'sombra' ? item.sombra : item.ferido
     if (!groups.has(target)) groups.set(target, { values: [] })
-    const n = toNumber(answers?.[q.id])
+    const n = toNumber(answers?.[qq.id])
     if (n !== null) groups.get(target)!.values.push(n)
-    items.push({ id: q.id, percentage: n === null ? 0 : Math.round((n / 5) * 100), answered: n !== null })
+    items.push({ id: qq.id, percentage: n === null ? 0 : Math.round((n / 5) * 100), answered: n !== null })
   }
   return { groups, items }
+}
+
+function percentile(values: number[]): number {
+  if (values.length === 0) return 0
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  return Math.round((mean / 5) * 100)
 }
 
 function shadowLayer(
@@ -279,13 +451,13 @@ export function axisResults(
   answers: Participant['answers'] | null | undefined,
 ): AxisResult[] {
   const map = new Map<string, { values: number[]; total: number }>()
-  for (const q of questions) {
-    if (q.module !== 'person' || q.type !== 'likert') continue
-    if (q.archetype === 'shadow') continue
-    if (!map.has(q.axis)) map.set(q.axis, { values: [], total: 0 })
-    const entry = map.get(q.axis)!
+  for (const qq of questions) {
+    if (qq.module !== 'person' || qq.type !== 'likert') continue
+    if (qq.archetype === 'shadow') continue
+    if (!map.has(qq.axis)) map.set(qq.axis, { values: [], total: 0 })
+    const entry = map.get(qq.axis)!
     entry.total += 1
-    const n = toNumber(answers?.[q.id])
+    const n = toNumber(answers?.[qq.id])
     if (n !== null) entry.values.push(n)
   }
 
@@ -345,7 +517,11 @@ export interface IntelligenceReport {
   completed: boolean
   answeredLikert: number
   totalLikert: number
+  confidence: 'alta' | 'media' | 'baixa'
+  confidenceReason: string
   scores: ArchetypeScore[]
+  rawScores: ArchetypeScore[]
+  adjustments: OpenAdjustment[]
   dominante: LayerResult
   secundario: LayerResult
   potencia: LayerResult
@@ -355,29 +531,36 @@ export interface IntelligenceReport {
   layers: LayerResult[]
   axes: AxisResult[]
   open: OpenAnswer[]
+  executiveSummary: string
   patterns: IntelligencePattern[]
   flags: ClinicalFlag[]
 }
+
+const clamp = (n: number) => Math.max(0, Math.min(100, n))
 
 export function buildIntelligenceReport(
   participant: Participant,
   questions: Question[],
 ): IntelligenceReport {
   const answers = participant.answers ?? {}
-  const scores = archetypeScores(questions, answers)
-  const ranked = [...scores]
-    .filter((s) => s.answered > 0)
-    .sort(compareScores)
+  const rawScores = weightedArchetypeScores(questions, answers)
+  const open = openAnswers(questions, answers)
+  const adjustments = openEvidenceAdjustments(open, rawScores)
+  const scores = rawScores.map((s) => {
+    const adj = adjustments.find((a) => a.archetypeId === s.archetypeId)
+    return { ...s, percentage: adj ? clamp(s.percentage + adj.delta) : s.percentage }
+  })
 
+  const ranked = [...scores].filter((s) => s.answered > 0).sort(compareScores)
   const dom = ranked[0] ?? null
   const sec = ranked[1] ?? null
 
-  const potenciaScores = archetypeScores(questions, answers, POTENCIA_AXES)
+  const potenciaScores = weightedArchetypeScores(questions, answers, POTENCIA_AXES)
     .filter((s) => s.answered > 0)
     .sort(compareScores)
   const potenciaTop = potenciaScores[0] ?? null
 
-  const evolucaoScores = archetypeScores(questions, answers, EVOLUCAO_AXES)
+  const evolucaoScores = weightedArchetypeScores(questions, answers, EVOLUCAO_AXES)
     .filter((s) => s.answered > 0)
     .sort(compareScores)
   const evolucaoTop = evolucaoScores[0] ?? null
@@ -391,7 +574,7 @@ export function buildIntelligenceReport(
       archetypeLabel: dom ? dom.label : null,
       essence: dom ? ARCHETYPE_META[dom.archetypeId].essence : [],
       percentage: dom ? dom.percentage : null,
-      basis: dom ? [`${dom.answered} de ${dom.total} itens respondidos`, 'Todas as perguntas likert do eixo pessoa'] : [],
+      basis: dom ? [`${dom.answered} de ${dom.total} itens ponderados`, 'Todas as perguntas likert do eixo pessoa'] : [],
       note: dom && dom.answered < dom.total ? `Baseado em ${dom.answered} de ${dom.total} itens do arquétipo.` : undefined,
     },
     {
@@ -402,7 +585,7 @@ export function buildIntelligenceReport(
       archetypeLabel: sec ? sec.label : null,
       essence: sec ? ARCHETYPE_META[sec.archetypeId].essence : [],
       percentage: sec ? sec.percentage : null,
-      basis: sec ? [`${sec.answered} de ${sec.total} itens respondidos`] : [],
+      basis: sec ? [`${sec.answered} de ${sec.total} itens ponderados`] : [],
       note: sec ? undefined : 'Não há pontuação secundária suficiente.',
     },
     {
@@ -446,41 +629,53 @@ export function buildIntelligenceReport(
   ]
 
   const axes = axisResults(questions, answers)
-  const open = openAnswers(questions, answers)
+  const likertQuestions = questions.filter(
+    (q) => q.module === 'person' && q.type === 'likert' && q.archetype !== 'shadow',
+  )
+  const answeredLikert = likertQuestions.filter((q) => hasAnswer(answers[q.id])).length
+  const totalLikert = likertQuestions.length
 
-  const answeredLikert = scores.reduce((acc, s) => acc + s.answered, 0)
-  const totalLikert = scores.reduce((acc, s) => acc + s.total, 0)
+  const answeredAxes = axes.filter((a) => a.answered > 0)
+  const sortedAxes = [...answeredAxes].sort((a, b) => (b.mean ?? 0) - (a.mean ?? 0))
+  const highestAxis = sortedAxes[0] ?? null
+  const lowestAxis = sortedAxes.length > 1 ? sortedAxes[sortedAxes.length - 1] : null
+
+  let confidence: IntelligenceReport['confidence'] = 'alta'
+  let confidenceReason = 'Volume de respostas e separação entre os principais índices adequados.'
+  if (answeredLikert < totalLikert * 0.5) {
+    confidence = 'baixa'
+    confidenceReason = `Apenas ${answeredLikert} de ${totalLikert} itens respondidos — insuficiente para leitura estável.`
+  } else if (dom && sec && dom.percentage - sec.percentage < 5) {
+    confidence = 'media'
+    confidenceReason = `Os índices ${dom.label} (${dom.percentage}%) e ${sec.label} (${sec.percentage}%) estão próximos — a distinção entre os arquétipos principais é moderada.`
+  }
+
+  const domEssence = dom ? ARCHETYPE_META[dom.archetypeId].essence.join(', ') : ''
+  const executiveSummary = dom
+    ? `Perfil com predominância do arquétipo ${dom.label} (${dom.percentage}%), caracterizado por ${domEssence}, sustentado por ${sec ? `${sec.label} (${sec.percentage}%)` : 'nenhum arquétipo secundário definido'}. A leitura indica ${highestAxis ? `o eixo ${highestAxis.label} (média ${(highestAxis.mean ?? 0).toFixed(2)}) como o mais expressivo` : 'sem eixo expressivo mensurável'}${lowestAxis && lowestAxis !== highestAxis ? ` e ${lowestAxis.label} (média ${(lowestAxis.mean ?? 0).toFixed(2)}) como o menos expressivo` : ''}. ${layers[3].archetypeLabel ? `O arquétipo ${layers[3].archetypeLabel} (${layers[3].percentage}%) emerge como padrão de atenção na camada sombra.` : ''}`
+    : 'Sem respostas suficientes para síntese.'
 
   const patterns: IntelligencePattern[] = []
   const flags: ClinicalFlag[] = []
 
-  const answeredAxes = axes.filter((a) => a.answered > 0)
-  if (answeredAxes.length > 0) {
-    const sorted = [...answeredAxes].sort((a, b) => (b.mean ?? 0) - (a.mean ?? 0))
-    const highest = sorted[0]
-    const lowest = sorted[sorted.length - 1]
-    if (highest && highest.mean !== null) {
-      patterns.push({
-        title: 'Eixo mais expressivo',
-        text: `O eixo com maior média de concordância foi ${highest.label} (média ${highest.mean.toFixed(2)} de 5), a partir de ${highest.answered} itens respondidos.`,
-      })
-    }
-    if (lowest && lowest !== highest && lowest.mean !== null) {
-      patterns.push({
-        title: 'Eixo menos expressivo',
-        text: `O eixo com menor média foi ${lowest.label} (média ${lowest.mean.toFixed(2)} de 5), a partir de ${lowest.answered} itens respondidos.`,
-      })
-    }
+  if (highestAxis && highestAxis.mean !== null) {
+    patterns.push({
+      title: 'Eixo mais expressivo',
+      text: `O eixo com maior média de concordância foi ${highestAxis.label} (média ${highestAxis.mean.toFixed(2)} de 5), a partir de ${highestAxis.answered} itens respondidos.`,
+    })
+  }
+  if (lowestAxis && lowestAxis !== highestAxis && lowestAxis.mean !== null) {
+    patterns.push({
+      title: 'Eixo menos expressivo',
+      text: `O eixo com menor média foi ${lowestAxis.label} (média ${lowestAxis.mean.toFixed(2)} de 5), a partir de ${lowestAxis.answered} itens respondidos.`,
+    })
   }
 
   const sombraValues = shadowScored(questions, answers, 'sombra')
-  const sombraMean =
-    sombraValues.items.filter((i) => i.answered).length > 0
-      ? sombraValues.items
-          .filter((i) => i.answered)
-          .reduce((acc, i) => acc + i.percentage, 0) /
-        sombraValues.items.filter((i) => i.answered).length
-      : null
+  const sombraItems = sombraValues.items.filter((i) => i.answered)
+  const sombraMean = sombraItems.length > 0
+    ? sombraItems.reduce((acc, i) => acc + i.percentage, 0) / sombraItems.length
+    : null
   if (sombraMean !== null) {
     patterns.push({
       title: 'Padrões defensivos',
@@ -499,6 +694,15 @@ export function buildIntelligenceReport(
     patterns.push({
       title: 'Registros abertos',
       text: `${providedOpen} de ${open.length} reflexões abertas foram preenchidas e estão preservadas na íntegra abaixo.`,
+    })
+  }
+
+  if (adjustments.length > 0) {
+    patterns.push({
+      title: 'Ajuste por evidência textual',
+      text: `As respostas abertas ajustaram ${adjustments.length} índice(s) em ±5 pontos: ${adjustments
+        .map((a) => `${a.archetypeLabel} ${a.delta > 0 ? '+' : ''}${a.delta}`)
+        .join(', ')}.`,
     })
   }
 
@@ -521,13 +725,10 @@ export function buildIntelligenceReport(
     })
   }
 
-  const highWound = open
-    .filter((o) => o.provided && o.answer.trim().length > 0)
-    .map((o) => o)
-  if (highWound.length > 0) {
+  if (providedOpen > 0) {
     flags.push({
       point: 'Respostas abertas disponíveis',
-      evidence: `${highWound.length} reflexões escritas — sugerem leitura qualitativa individual (aba Respostas e seção abaixo).`,
+      evidence: `${providedOpen} reflexões escritas — sugerem leitura qualitativa individual (seção 3 abaixo).`,
     })
   }
 
@@ -569,7 +770,11 @@ export function buildIntelligenceReport(
     completed: participant.status === 'concluido',
     answeredLikert,
     totalLikert,
+    confidence,
+    confidenceReason,
     scores,
+    rawScores,
+    adjustments,
     dominante: layers[0],
     secundario: layers[1],
     potencia: layers[2],
@@ -579,6 +784,7 @@ export function buildIntelligenceReport(
     layers,
     axes,
     open,
+    executiveSummary,
     patterns,
     flags,
   }

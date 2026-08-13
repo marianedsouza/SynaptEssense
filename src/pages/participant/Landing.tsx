@@ -4,6 +4,7 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ChevronDown,
   Link2,
   MessageCircle,
   Share2,
@@ -121,13 +122,28 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
             </div>
           </div>
 
+          <button
+            onClick={() =>
+              document
+                .getElementById('synapt-cta')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+            className="mx-auto mt-6 flex h-10 w-10 animate-bounce items-center justify-center rounded-full border border-se-violet/20 bg-white/70 text-se-violet backdrop-blur transition hover:bg-white md:hidden"
+            aria-label="Rolar para continuar"
+          >
+            <ChevronDown className="h-5 w-5" />
+          </button>
+
           <p className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-ink-muted md:text-base">
             Uma experi&#234;ncia de levantamento estrat&#233;gico desenvolvida para ampliar
             a compreens&#227;o sobre sua forma de pensar, agir, se relacionar, decidir
             e se posicionar.
           </p>
 
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+          <div
+            id="synapt-cta"
+            className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
+          >
             <button
               onClick={() => navigate('/recepcao')}
               className="btn-primary group"

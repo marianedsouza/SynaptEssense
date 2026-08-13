@@ -188,9 +188,9 @@ export function Questionnaire() {
   const axisMeta = AXIS[question.axis]
 
   return (
-    <div className="flex min-h-screen flex-col bg-se-mist">
-      <header className="sticky top-0 z-20 border-b border-ink/5 bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-3">
+    <div className="flex h-dvh min-h-screen flex-col overflow-hidden bg-se-mist">
+      <header className="z-20 border-b border-ink/5 bg-white/85 backdrop-blur-md">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-2.5">
           <Logo size="sm" />
           <div className="flex items-center gap-2 text-xs text-ink-muted">
             {saved && (
@@ -204,14 +204,14 @@ export function Questionnaire() {
             </span>
           </div>
         </div>
-        <div className="mx-auto max-w-3xl px-5 pb-3">
+        <div className="mx-auto max-w-3xl px-5 pb-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-se-violet">
               {axisMeta.label}
             </div>
             <div className="text-[11px] text-ink-muted">{progress}%</div>
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink/5">
+          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-ink/5">
             <div
               className="bg-grad h-full rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
@@ -220,42 +220,44 @@ export function Questionnaire() {
         </div>
       </header>
 
-      <main className="relative z-10 flex flex-1 flex-col px-5 py-10">
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col">
-          <div key={question.id} className="animate-fade-up">
-            <div className="text-center">
-              <div className="font-display text-xl leading-relaxed text-ink md:text-2xl">
-                {question.text}
+      <main className="relative z-10 flex flex-1 flex-col overflow-hidden px-5 py-4 md:py-8">
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-y-auto scrollbar-hide">
+          <div className="flex flex-1 flex-col justify-center py-2 md:py-4">
+            <div key={question.id} className="animate-fade-up">
+              <div className="text-center">
+                <div className="font-display text-lg leading-snug text-ink md:text-2xl md:leading-relaxed">
+                  {question.text}
+                </div>
+              </div>
+              <div className="mt-6 md:mt-8">
+                <QuestionInput
+                  question={question}
+                  value={answers[question.id]}
+                  onChange={(v) => setAnswer(question.id, v)}
+                />
               </div>
             </div>
-            <div className="mt-10">
-              <QuestionInput
-                question={question}
-                value={answers[question.id]}
-                onChange={(v) => setAnswer(question.id, v)}
-              />
-            </div>
-          </div>
 
-          {error && (
-            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
-              {error}
-            </div>
-          )}
+            {error && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-2.5 text-center text-sm text-red-700">
+                {error}
+              </div>
+            )}
 
-          <div className="mt-12 flex items-center justify-between gap-4">
-            <button
-              onClick={goBack}
-              disabled={isFirst}
-              className="btn-secondary !px-5 !py-3 disabled:opacity-30 disabled:pointer-events-none"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar
-            </button>
-            <button onClick={goNext} className="btn-primary group !px-7 !py-3">
-              {isLastQuestion ? 'Finalizar' : 'Continuar'}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </button>
+            <div className="mt-6 flex items-center justify-between gap-4 md:mt-10">
+              <button
+                onClick={goBack}
+                disabled={isFirst}
+                className="btn-secondary !px-5 !py-3 disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar
+              </button>
+              <button onClick={goNext} className="btn-primary group !px-7 !py-3">
+                {isLastQuestion ? 'Finalizar' : 'Continuar'}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
           </div>
         </div>
       </main>
@@ -274,21 +276,21 @@ function QuestionInput({
 }) {
   if (question.type === 'likert') {
     return (
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {LIKERT_SCALE.map((option) => {
           const active = value === String(option.value)
           return (
             <button
               key={option.value}
               onClick={() => onChange(String(option.value))}
-              className={`flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left transition-all duration-200 ${
+              className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-2.5 text-left transition-all duration-200 md:gap-4 md:px-5 md:py-4 ${
                 active
                   ? 'border-se-violet bg-se-lavender shadow-soft'
                   : 'border-ink/10 bg-white hover:border-se-violet/40 hover:bg-white/70'
               }`}
             >
               <span
-                className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-colors ${
+                className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-colors md:h-9 md:w-9 md:text-sm ${
                   active
                     ? 'border-se-violet bg-se-violet text-white'
                     : 'border-ink/15 text-ink-soft'
@@ -312,25 +314,25 @@ function QuestionInput({
 
   if (question.type === 'single') {
     return (
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {question.options.map((option) => {
           const active = value === option.id
           return (
             <button
               key={option.id}
               onClick={() => onChange(option.id)}
-              className={`flex w-full items-center gap-3 rounded-2xl border px-5 py-4 text-left transition-all duration-200 ${
+              className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-2.5 text-left transition-all duration-200 md:px-5 md:py-4 ${
                 active
                   ? 'border-se-violet bg-se-lavender shadow-soft'
                   : 'border-ink/10 bg-white hover:border-se-violet/40'
               }`}
             >
               <span
-                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${
+                className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${
                   active ? 'border-se-violet' : 'border-ink/20'
                 }`}
               >
-                {active && <span className="h-2.5 w-2.5 rounded-full bg-se-violet" />}
+                {active && <span className="h-2 w-2 rounded-full bg-se-violet" />}
               </span>
               <span
                 className={`text-sm md:text-base ${
@@ -349,7 +351,7 @@ function QuestionInput({
   if (question.type === 'multiple') {
     const selected = Array.isArray(value) ? value : []
     return (
-      <div className="flex flex-wrap gap-2.5">
+      <div className="flex flex-wrap gap-2">
         {question.options.map((option) => {
           const active = selected.includes(option.id)
           return (
@@ -362,7 +364,7 @@ function QuestionInput({
                     : [...selected, option.id],
                 )
               }
-              className={`rounded-full border px-5 py-3 text-sm transition-all duration-200 ${
+              className={`rounded-full border px-4 py-2.5 text-sm transition-all duration-200 md:px-5 md:py-3 ${
                 active
                   ? 'border-se-violet bg-se-lavender font-medium text-se-violet-dark shadow-soft'
                   : 'border-ink/15 bg-white text-ink-soft hover:border-se-violet/40'
@@ -380,7 +382,7 @@ function QuestionInput({
     <textarea
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value)}
-      rows={question.type === 'text' ? 3 : 6}
+      rows={question.type === 'text' ? 3 : 5}
       className="input resize-y !rounded-2xl text-base leading-relaxed"
       placeholder="Escreva aqui com suas palavras…"
     />
@@ -395,25 +397,25 @@ function TransitionScreen({
   onContinue: () => void
 }) {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-se-mist px-6">
+    <div className="relative flex h-dvh min-h-screen flex-col items-center justify-center overflow-hidden bg-se-mist px-6">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 right-0 h-96 w-96 rounded-full bg-se-violet/10 blur-3xl" />
         <div className="absolute -bottom-32 left-0 h-96 w-96 rounded-full bg-se-teal/10 blur-3xl" />
       </div>
-      <div className="relative z-10 mx-auto max-w-xl text-center animate-fade-up">
+      <div className="relative z-10 mx-auto w-full max-w-xl overflow-y-auto scrollbar-hide text-center animate-fade-up">
         <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-se-violet">
           {meta.id === 'brand' ? 'Um novo eixo' : 'Agora, vamos olhar para outra dimensão'}
         </div>
-        <h2 className="mt-6 font-display text-4xl font-semibold text-ink md:text-5xl">
+        <h2 className="mt-4 font-display text-3xl font-semibold text-ink md:text-5xl">
           {meta.label}
         </h2>
-        <p className="mt-4 font-display text-lg italic text-se-violet-dark">
+        <p className="mt-3 font-display text-lg italic text-se-violet-dark">
           “{meta.centralQuestion}”
         </p>
-        <p className="mx-auto mt-6 max-w-md text-sm leading-relaxed text-ink-soft md:text-base">
+        <p className="mx-auto mt-5 max-w-md text-sm leading-relaxed text-ink-soft md:text-base">
           {meta.description}
         </p>
-        <button onClick={onContinue} className="btn-primary group mt-10">
+        <button onClick={onContinue} className="btn-primary group mt-8">
           Continuar
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
         </button>

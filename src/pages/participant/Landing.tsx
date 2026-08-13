@@ -1,10 +1,21 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, BookOpen, X } from 'lucide-react'
+import {
+  ArrowRight,
+  BookOpen,
+  Check,
+  ChevronDown,
+  Link2,
+  MessageCircle,
+  X,
+} from 'lucide-react'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { Logo } from '../../components/Logo'
 import { AnalystCard } from '../../components/AnalystCard'
 import type { AnalystProfile } from '../../lib/types'
+
+const SHARE_MESSAGE =
+  'SynaptEssence360® — Plataforma de Tecnologia Social para o Desenvolvimento Humano Integral. Toda transformação começa quando novas conexões são criadas. Faça o seu levantamento estratégico:'
 
 interface LandingProps {
   analystProfile?: AnalystProfile
@@ -14,6 +25,35 @@ interface LandingProps {
 export function Landing({ analystProfile, heroMessage }: LandingProps) {
   const navigate = useNavigate()
   const [showMethodology, setShowMethodology] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const scrollToShare = () => {
+    document
+      .getElementById('compartilhar')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  const handleWhatsApp = () => {
+    const url = `https://wa.me/?text=${encodeURIComponent(`${SHARE_MESSAGE} ${window.location.href}`)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = window.location.href
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2500)
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col bg-se-mist">
@@ -44,6 +84,14 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
               <p className="relative font-display text-xl font-bold italic leading-relaxed bg-gradient-to-r from-se-teal via-se-violet to-se-teal-light bg-clip-text text-transparent animate-[shimmer_6s_ease-in-out_infinite] [background-size:200%_100%] md:text-2xl">
                 {`\u201C${heroMessage}\u201D`}
               </p>
+              <button
+                onClick={scrollToShare}
+                className="relative mx-auto mt-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-se-violet/80 transition hover:text-se-violet md:hidden"
+                aria-label="Rolar até os botões de compartilhar"
+              >
+                Compartilhar
+                <ChevronDown className="h-4 w-4 animate-bounce" />
+              </button>
             </div>
           </div>
 
@@ -67,6 +115,24 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
             >
               <BookOpen className="h-4 w-4" />
               Conhe&#231;a a metodologia
+            </button>
+          </div>
+
+          <div
+            id="compartilhar"
+            className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center scroll-mt-6"
+          >
+            <button onClick={handleWhatsApp} className="btn-secondary !px-6 !py-3">
+              <MessageCircle className="h-4 w-4" />
+              Compartilhar no WhatsApp
+            </button>
+            <button onClick={handleCopy} className="btn-secondary !px-6 !py-3">
+              {copied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Link2 className="h-4 w-4" />
+              )}
+              {copied ? 'Link copiado!' : 'Copiar link'}
             </button>
           </div>
         </div>

@@ -38,9 +38,15 @@ export async function fetchSettings(): Promise<Record<string, string>> {
   }
 }
 
-export async function saveSetting(key: string, value: string): Promise<boolean> {
+export async function saveSetting(
+  key: string,
+  value: string,
+): Promise<{ ok: boolean; error: string | null }> {
   const { error } = await supabase
     .from('settings')
     .upsert({ key, value }, { onConflict: 'key' })
-  return !error
+  if (error) {
+    return { ok: false, error: error.message }
+  }
+  return { ok: true, error: null }
 }

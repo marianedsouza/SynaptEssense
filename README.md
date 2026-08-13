@@ -59,8 +59,8 @@ Primeira versão funcional do ecossistema SynaptEssence360®. Implementa a **CAM
 
 ### 3. Storage (foto da analista)
 
-1. Em **Storage → New bucket**, crie o bucket `assets` (público).
-2. Na aba Policies: permita upload/exclusão apenas para usuários autenticados.
+1. Abra o **SQL Editor** e execute o arquivo [`supabase/storage.sql`](supabase/storage.sql) — cria o bucket público `assets` e as políticas de leitura (anon/autenticado) e upload/exclusão (autenticado).
+2. Alternativa manual: em **Storage → New bucket**, crie o bucket `assets` como **público** e, na aba Policies, permita upload/exclusão apenas para usuários autenticados.
 
 ### 4. Variáveis de ambiente
 

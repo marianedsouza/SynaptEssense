@@ -21,6 +21,7 @@ export function Settings() {
   const [uploading, setUploading] = useState(false)
   const [photoUrl, setPhotoUrl] = useState('')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSettings().then((settings) => {
@@ -34,10 +35,17 @@ export function Settings() {
     setValues((prev) => ({ ...prev, [key]: value }))
 
   const handleSave = async () => {
+    setSaveError(null)
+    const results = []
     for (const field of FIELDS) {
-      await saveSetting(field.key, values[field.key] ?? '')
+      results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
-    await saveSetting('analyst_photo', photoUrl)
+    results.push(await saveSetting('analyst_photo', photoUrl))
+    const failed = results.find((r) => !r.ok)
+    if (failed) {
+      setSaveError(`Não foi possível salvar: ${failed.error}`)
+      return
+    }
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2000)
   }
@@ -101,6 +109,12 @@ export function Settings() {
           )}
         </button>
       </div>
+
+      {saveError && (
+        <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {saveError}
+        </div>
+      )}
 
       <div className="card p-5 md:p-8">
         <h2 className="font-display text-xl font-semibold text-ink">

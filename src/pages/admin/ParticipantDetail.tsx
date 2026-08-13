@@ -202,23 +202,23 @@ export function ParticipantDetail() {
         <div className="flex w-full gap-2 sm:w-auto sm:flex-wrap sm:gap-3">
           <button
             onClick={handleDelete}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-red-200 px-2 py-3 text-xs font-semibold uppercase tracking-wide text-red-600 transition hover:bg-red-50 hover:border-red-300 sm:flex-none sm:gap-2 sm:px-5 sm:text-sm sm:normal-case sm:tracking-normal"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 px-2 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-red-600 transition hover:bg-red-50 hover:border-red-300 sm:flex-none sm:gap-2 sm:px-5 sm:py-3 sm:text-sm sm:normal-case sm:tracking-normal"
           >
-            <Trash2 className="h-4 w-4 shrink-0" />
+            <Trash2 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             Excluir
           </button>
           <button
             onClick={() => handleExport('pdf')}
-            className="btn-secondary flex-1 !px-2 !py-3 text-xs sm:flex-none sm:!px-5 sm:text-sm"
+            className="btn-secondary flex-1 !rounded-xl !px-2 !py-2.5 text-[11px] sm:flex-none sm:!px-5 sm:!py-3 sm:!text-sm"
           >
-            <FileDown className="h-4 w-4 shrink-0" />
+            <FileDown className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             Exportar PDF
           </button>
           <button
             onClick={() => handleExport('excel')}
-            className="btn-secondary flex-1 !px-2 !py-3 text-xs sm:flex-none sm:!px-5 sm:text-sm"
+            className="btn-secondary flex-1 !rounded-xl !px-2 !py-2.5 text-[11px] sm:flex-none sm:!px-5 sm:!py-3 sm:!text-sm"
           >
-            <FileSpreadsheet className="h-4 w-4 shrink-0" />
+            <FileSpreadsheet className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             Exportar Excel
           </button>
         </div>

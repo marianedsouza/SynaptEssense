@@ -190,15 +190,19 @@ export function Questionnaire() {
   return (
     <div className="flex h-dvh min-h-screen flex-col overflow-hidden bg-se-mist">
       <header className="z-20 border-b border-ink/5 bg-white/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-2.5">
-          <Logo size="sm" />
-          <div className="flex items-center gap-2 text-xs text-ink-muted">
+        <div className="mx-auto grid max-w-3xl grid-cols-3 items-center px-5 py-2.5">
+          <div className="flex justify-start">
             {saved && (
               <span className="flex items-center gap-1 text-se-green">
                 <Check className="h-3.5 w-3.5" />
                 Progresso salvo
               </span>
             )}
+          </div>
+          <div className="flex justify-center">
+            <Logo size="md" />
+          </div>
+          <div className="flex justify-end">
             <span className="rounded-full bg-se-lavender px-3 py-1 font-medium text-se-violet-dark">
               {answeredCount + 1} de {totalQuestions}
             </span>

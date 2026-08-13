@@ -59,11 +59,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
       <div className="flex flex-1 flex-col md:pl-64">
         <header className="sticky top-0 z-20 border-b border-ink/5 bg-white/85 px-4 py-2.5 backdrop-blur-md md:hidden">
-          <div className="flex items-center justify-between">
-            <Logo size="sm" />
+          <div className="relative flex items-center justify-center">
+            <Logo size="md" />
             <button
               onClick={handleLogout}
-              className="rounded-full p-1.5 text-ink-muted hover:bg-se-mist"
+              className="absolute right-0 rounded-full p-1.5 text-ink-muted hover:bg-se-mist"
               aria-label="Sair"
             >
               <LogOut className="h-4 w-4" />

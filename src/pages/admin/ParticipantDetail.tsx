@@ -11,7 +11,7 @@ import { AdminLayout } from '../../components/admin/AdminLayout'
 import { fetchAnalystNote, fetchParticipantById, upsertAnalystNote } from '../../lib/admin'
 import { AXIS } from '../../lib/axes'
 import { exportParticipantExcel, exportParticipantPdf, groupAnswersByAxis } from '../../lib/export'
-import { buildQuestionList } from '../../lib/questionUtils'
+import { buildQuestionList, participantPosition } from '../../lib/questionUtils'
 import type { AnalystNote, Participant } from '../../lib/types'
 
 type Tab = 'resumo' | 'respostas' | 'analise' | 'inteligencia'
@@ -113,6 +113,18 @@ export function ParticipantDetail() {
     else await exportParticipantExcel(participant, questions)
   }
 
+  const position = participant
+    ? participantPosition(participant.survey_for, participant.answers ?? {})
+    : null
+
+  const positionText = position
+    ? participant?.status === 'concluido'
+      ? `Concluído (${position.total} perguntas)`
+      : position.answered === 0
+        ? `Nenhuma pergunta respondida de ${position.total}`
+        : `Parou na pergunta ${position.answered} de ${position.total}`
+    : '—'
+
   if (loading) {
     return (
       <AdminLayout>
@@ -166,7 +178,7 @@ export function ParticipantDetail() {
             {fmtDate(participant.created_at)}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button onClick={() => handleExport('pdf')} className="btn-secondary !px-5 !py-3">
             <FileDown className="h-4 w-4" />
             Exportar PDF
@@ -239,6 +251,7 @@ export function ParticipantDetail() {
                   'Progresso',
                   `${participant.progress ?? 0}%`,
                 ],
+                ['Onde parou', positionText],
                 [
                   'Tempo de conclusão',
                   participant.completed_time_seconds

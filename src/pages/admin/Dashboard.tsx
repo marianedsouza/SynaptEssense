@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ArrowRight,
   FileDown,
   FileSpreadsheet,
   Search,
@@ -10,6 +11,9 @@ import { AdminLayout } from '../../components/admin/AdminLayout'
 import { fetchParticipants } from '../../lib/admin'
 import { exportParticipantExcel, exportParticipantPdf } from '../../lib/export'
 import { buildQuestionList } from '../../lib/questionUtils'
+import { participantPosition } from '../../lib/questionUtils'
+import type { ParticipantPosition } from '../../lib/questionUtils'
+import { AXIS } from '../../lib/axes'
 import type { Participant } from '../../lib/types'
 
 type Filter = 'todos' | 'iniciado' | 'em_andamento' | 'concluido'
@@ -38,6 +42,18 @@ function fmtDate(iso: string | null): string {
   })
 }
 
+function whereStoppedText(pos: ParticipantPosition, status: string): string {
+  if (status === 'concluido')
+    return `Levantamento concluído (${pos.total} perguntas)`
+  if (pos.answered === 0) return `Ainda não respondeu nenhuma pergunta`
+  const axis = pos.nextQuestion
+    ? (AXIS[pos.nextQuestion.axis]?.shortLabel ?? pos.nextQuestion.axis)
+    : null
+  return `Parou na pergunta ${pos.answered} de ${pos.total}${
+    axis ? ` · próxima: ${axis}` : ''
+  }`
+}
+
 export function Dashboard() {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,6 +75,14 @@ export function Dashboard() {
     load()
   }, [load])
 
+  const positions = useMemo(() => {
+    const map: Record<string, ParticipantPosition> = {}
+    for (const p of participants) {
+      map[p.id] = participantPosition(p.survey_for, p.answers ?? {})
+    }
+    return map
+  }, [participants])
+
   const filtered = useMemo(() => {
     return participants.filter((p) => {
       const matchFilter = filter === 'todos' || p.status === filter
@@ -69,6 +93,11 @@ export function Dashboard() {
       return matchFilter && matchQuery
     })
   }, [participants, filter, query])
+
+  const searchResults = useMemo(
+    () => (query.trim() ? filtered.slice(0, 6) : []),
+    [filtered, query],
+  )
 
   const stats = useMemo(() => {
     const total = participants.length
@@ -101,6 +130,61 @@ export function Dashboard() {
         </h1>
       </div>
 
+      <div className="relative z-20 mb-8">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-muted" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar participante por nome ou e-mail…"
+            className="input !py-4 pl-12 text-base"
+          />
+        </div>
+        {query.trim() && (
+          <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-soft">
+            {searchResults.length === 0 ? (
+              <div className="px-5 py-6 text-center text-sm text-ink-muted">
+                Nenhum participante encontrado com “{query}”.
+              </div>
+            ) : (
+              searchResults.map((p) => {
+                const pos = positions[p.id]
+                return (
+                  <Link
+                    key={p.id}
+                    to={`/admin/participantes/${p.id}`}
+                    className="flex items-start gap-3 border-b border-ink/5 px-5 py-4 transition hover:bg-se-mist/60 last:border-b-0"
+                  >
+                    <div className="bg-grad grid h-10 w-10 shrink-0 place-items-center rounded-xl">
+                      <UserRound className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-ink">
+                          {p.name || 'Sem nome'}
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${statusBadge(p.status)}`}
+                        >
+                          {STATUS_LABEL[p.status] ?? p.status}
+                        </span>
+                      </div>
+                      <div className="truncate text-xs text-ink-muted">
+                        {p.email || '—'}
+                      </div>
+                      <div className="mt-1 text-xs font-medium text-se-violet-dark">
+                        {whereStoppedText(pos, p.status)}
+                      </div>
+                    </div>
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-ink-muted" />
+                  </Link>
+                )
+              })
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: 'Levantamentos iniciados', value: stats.total, tone: 'text-se-teal' },
@@ -126,21 +210,15 @@ export function Dashboard() {
             <h2 className="font-display text-xl font-semibold text-ink">
               Participantes
             </h2>
+            <span className="rounded-full bg-se-mist px-2.5 py-0.5 text-xs font-medium text-ink-muted">
+              {filtered.length}
+            </span>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar por nome ou e-mail"
-                className="input !py-2.5 pl-9"
-              />
-            </div>
+          <div>
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as Filter)}
-              className="input !w-auto !py-2.5"
+              className="input !w-full !py-2.5 md:!w-auto"
             >
               <option value="todos">Todos</option>
               <option value="iniciado">Iniciados</option>
@@ -159,82 +237,179 @@ export function Dashboard() {
             Nenhum participante encontrado.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
-                  <th className="px-5 py-3 font-semibold">Participante</th>
-                  <th className="px-5 py-3 font-semibold">Tipo</th>
-                  <th className="px-5 py-3 font-semibold">Data</th>
-                  <th className="px-5 py-3 font-semibold">Progresso</th>
-                  <th className="px-5 py-3 font-semibold">Status</th>
-                  <th className="px-5 py-3 text-right font-semibold">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((p) => (
-                  <tr
+          <>
+            <div className="sm:hidden">
+              {filtered.map((p) => {
+                const pos = positions[p.id]
+                return (
+                  <div
                     key={p.id}
-                    className="border-b border-ink/5 transition-colors hover:bg-se-mist/60"
+                    className="border-b border-ink/5 px-5 py-4 last:border-b-0"
                   >
-                    <td className="px-5 py-4">
-                      <Link
-                        to={`/admin/participantes/${p.id}`}
-                        className="font-medium text-ink hover:text-se-violet"
+                    <Link
+                      to={`/admin/participantes/${p.id}`}
+                      className="flex items-start justify-between gap-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium text-ink">
+                          {p.name || 'Sem nome'}
+                        </div>
+                        <div className="truncate text-xs text-ink-muted">
+                          {p.email || '—'}
+                        </div>
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusBadge(p.status)}`}
                       >
-                        {p.name || 'Sem nome'}
-                      </Link>
-                      <div className="text-xs text-ink-muted">{p.email || '—'}</div>
-                    </td>
-                    <td className="px-5 py-4 text-ink-soft">{p.survey_for || '—'}</td>
-                    <td className="px-5 py-4 text-ink-soft">{fmtDate(p.created_at)}</td>
-                    <td className="px-5 py-4">
+                        {STATUS_LABEL[p.status] ?? p.status}
+                      </span>
+                    </Link>
+                    <div className="mt-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink/5">
+                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-ink/5">
                           <div
                             className="bg-grad h-full rounded-full"
                             style={{ width: `${p.progress ?? 0}%` }}
                           />
                         </div>
-                        <span className="text-xs text-ink-muted">{p.progress ?? 0}%</span>
+                        <span className="text-xs text-ink-muted">
+                          {p.progress ?? 0}%
+                        </span>
                       </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusBadge(p.status)}`}
+                      <div className="mt-2 text-xs font-medium text-se-violet-dark">
+                        {whereStoppedText(pos, p.status)}
+                      </div>
+                      <div className="mt-1 text-xs text-ink-muted">
+                        {p.survey_for || '—'} · {fmtDate(p.created_at)}
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/admin/participantes/${p.id}`}
+                        className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
                       >
-                        {STATUS_LABEL[p.status] ?? p.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          to={`/admin/participantes/${p.id}`}
-                          className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
-                        >
-                          Abrir
-                        </Link>
-                        <button
-                          onClick={() => handleExport(p, 'pdf')}
-                          className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
-                          title="Exportar PDF"
-                        >
-                          <FileDown className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleExport(p, 'excel')}
-                          className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
-                          title="Exportar Excel"
-                        >
-                          <FileSpreadsheet className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
+                        Abrir
+                      </Link>
+                      <button
+                        onClick={() => handleExport(p, 'pdf')}
+                        className="flex items-center gap-1 rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                        title="Exportar PDF"
+                      >
+                        <FileDown className="h-3.5 w-3.5" />
+                        PDF
+                      </button>
+                      <button
+                        onClick={() => handleExport(p, 'excel')}
+                        className="flex items-center gap-1 rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                        title="Exportar Excel"
+                      >
+                        <FileSpreadsheet className="h-3.5 w-3.5" />
+                        Excel
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
+                    <th className="px-5 py-3 font-semibold">Participante</th>
+                    <th className="hidden px-5 py-3 font-semibold lg:table-cell">
+                      Tipo
+                    </th>
+                    <th className="hidden px-5 py-3 font-semibold md:table-cell">
+                      Data
+                    </th>
+                    <th className="px-5 py-3 font-semibold">Progresso</th>
+                    <th className="px-5 py-3 font-semibold">Onde parou</th>
+                    <th className="px-5 py-3 font-semibold">Status</th>
+                    <th className="px-5 py-3 text-right font-semibold">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filtered.map((p) => {
+                    const pos = positions[p.id]
+                    return (
+                      <tr
+                        key={p.id}
+                        className="border-b border-ink/5 transition-colors hover:bg-se-mist/60"
+                      >
+                        <td className="px-5 py-4">
+                          <Link
+                            to={`/admin/participantes/${p.id}`}
+                            className="font-medium text-ink hover:text-se-violet"
+                          >
+                            {p.name || 'Sem nome'}
+                          </Link>
+                          <div className="text-xs text-ink-muted">
+                            {p.email || '—'}
+                          </div>
+                        </td>
+                        <td className="hidden px-5 py-4 text-ink-soft lg:table-cell">
+                          {p.survey_for || '—'}
+                        </td>
+                        <td className="hidden px-5 py-4 text-ink-soft md:table-cell">
+                          {fmtDate(p.created_at)}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-ink/5">
+                              <div
+                                className="bg-grad h-full rounded-full"
+                                style={{ width: `${p.progress ?? 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-ink-muted">
+                              {p.progress ?? 0}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-xs font-medium text-se-violet-dark">
+                            {whereStoppedText(pos, p.status)}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusBadge(p.status)}`}
+                          >
+                            {STATUS_LABEL[p.status] ?? p.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex justify-end gap-2">
+                            <Link
+                              to={`/admin/participantes/${p.id}`}
+                              className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                            >
+                              Abrir
+                            </Link>
+                            <button
+                              onClick={() => handleExport(p, 'pdf')}
+                              className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                              title="Exportar PDF"
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleExport(p, 'excel')}
+                              className="rounded-full border border-ink/10 px-3 py-1.5 text-xs font-medium text-ink-soft transition hover:border-se-violet hover:text-se-violet"
+                              title="Exportar Excel"
+                            >
+                              <FileSpreadsheet className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </AdminLayout>

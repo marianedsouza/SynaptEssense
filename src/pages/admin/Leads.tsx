@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Phone, Sparkles } from 'lucide-react'
+import { Phone, Sparkles, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 
@@ -34,6 +34,13 @@ export function Leads() {
     // Marcar como visto
     localStorage.setItem('synapt_leads_last_seen', new Date().toISOString())
   }, [load])
+
+  async function handleDelete(id: string, name: string) {
+    const confirmed = window.confirm(`Excluir o interesse de ${name}? Essa ação não pode ser desfeita.`)
+    if (!confirmed) return
+    await supabase.from('protocol_leads').delete().eq('id', id)
+    setLeads((prev) => prev.filter((l) => l.id !== id))
+  }
 
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString('pt-BR', {
@@ -122,7 +129,16 @@ export function Leads() {
                       {lead.modality === 'integral' ? 'Integral' : 'Social'}
                     </span>
                   </div>
-                  <div className="mt-2 text-[11px] text-ink-muted">{fmtDate(lead.created_at)}</div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[11px] text-ink-muted">{fmtDate(lead.created_at)}</span>
+                    <button
+                      onClick={() => handleDelete(lead.id, lead.name)}
+                      className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -137,6 +153,7 @@ export function Leads() {
                     <th className="px-5 py-3 font-semibold">Modalidade</th>
                     <th className="px-5 py-3 font-semibold">Data</th>
                     <th className="px-5 py-3 font-semibold">Contato</th>
+                    <th className="px-5 py-3 text-right font-semibold">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -160,6 +177,15 @@ export function Leads() {
                           <Phone className="h-3.5 w-3.5" />
                           WhatsApp
                         </a>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={() => handleDelete(lead.id, lead.name)}
+                          className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 hover:border-red-300"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </td>
                     </tr>
                   ))}

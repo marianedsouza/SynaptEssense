@@ -330,8 +330,9 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
               <p>O question&#225;rio &#233; apenas o in&#237;cio da jornada.</p>
             </div>
 
-            <div className="mt-6 border-t border-ink/5 pt-5">
+            <div className="mt-6 border-t border-ink/5 pt-5 space-y-4">
               <AnalystCard profile={analystProfile} compact />
+              {analystProfile2 && <AnalystCard profile={analystProfile2} compact />}
               <p className="mt-4 text-sm leading-relaxed text-ink-muted">
                 Um processo de desenvolvimento constru&#237;do a partir da an&#225;lise
                 individual do SynaptEssence360&#174;, que transforma autoconhecimento

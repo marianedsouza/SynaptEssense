@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, ChevronDown } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
+import { supabase } from '../../lib/supabase'
 
 // ─── Diagnostic Questions ───────────────────────────────────────────────────
 
@@ -86,7 +87,38 @@ export function Protocol() {
   const [recommendation, setRecommendation] = useState<'social' | 'transition' | 'integral'>('social')
   const [committed, setCommitted] = useState(false)
   const [highlightedCard, setHighlightedCard] = useState<'social' | 'integral' | null>(null)
+  const [showContact, setShowContact] = useState(false)
+  const [selectedModality, setSelectedModality] = useState<'social' | 'integral'>('social')
+  const [contactName, setContactName] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactSent, setContactSent] = useState(false)
+  const [contactLoading, setContactLoading] = useState(false)
   const modalitiesRef = useRef<HTMLDivElement>(null)
+
+  function openContactModal(modality: 'social' | 'integral') {
+    setSelectedModality(modality)
+    setContactName('')
+    setContactPhone('')
+    setContactSent(false)
+    setShowContact(true)
+  }
+
+  async function handleContactSubmit() {
+    if (!contactName.trim() || !contactPhone.trim()) return
+    setContactLoading(true)
+    try {
+      await supabase.from('protocol_leads').insert({
+        name: contactName.trim(),
+        phone: contactPhone.trim(),
+        modality: selectedModality,
+        created_at: new Date().toISOString(),
+      })
+    } catch {
+      // silently continue even if supabase is not configured
+    }
+    setContactLoading(false)
+    setContactSent(true)
+  }
 
   function calculateRecommendation() {
     const score = answers.reduce<number>((sum, a) => sum + (a ?? 0), 0)
@@ -352,7 +384,7 @@ export function Protocol() {
                   <p className="text-xs text-ink-muted">Parcelamento em até 10x com juros da operadora.</p>
                 </div>
               </div>
-              <button className="btn-secondary mt-6 w-full">
+              <button onClick={() => openContactModal('social')} className="btn-secondary mt-6 w-full">
                 Quero iniciar nesta modalidade
               </button>
             </div>
@@ -402,7 +434,7 @@ export function Protocol() {
                   <p className="text-xs text-ink-muted">Parcelamento em até 10x com juros da operadora.</p>
                 </div>
               </div>
-              <button className="btn-primary mt-6 w-full">
+              <button onClick={() => openContactModal('integral')} className="btn-primary mt-6 w-full">
                 Quero viver o Protocolo Integral
                 <ArrowRight className="h-4 w-4" />
               </button>
@@ -513,6 +545,90 @@ export function Protocol() {
           <p>O especialista conduz a transformação.</p>
         </div>
       </footer>
+
+      {/* ─── CONTACT MODAL ─── */}
+      {showContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
+          <div className="card w-full max-w-md p-8 animate-fade-up">
+            {!contactSent ? (
+              <>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-se-violet">
+                  {selectedModality === 'social' ? 'Modalidade Social' : 'Protocolo Integral de Reconstrução'}
+                </div>
+                <h3 className="mt-2 font-display text-xl font-semibold text-ink">
+                  Vamos começar sua jornada
+                </h3>
+                <p className="mt-2 text-sm text-ink-soft">
+                  Deixe seu nome e telefone. Entraremos em contato para alinhar os próximos passos e enviar o link de pagamento.
+                </p>
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="label" htmlFor="contactName">Nome completo</label>
+                    <input
+                      id="contactName"
+                      type="text"
+                      className="input"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      placeholder="Seu nome"
+                    />
+                  </div>
+                  <div>
+                    <label className="label" htmlFor="contactPhone">WhatsApp / Telefone</label>
+                    <input
+                      id="contactPhone"
+                      type="tel"
+                      className="input"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleContactSubmit()}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleContactSubmit}
+                  disabled={!contactName.trim() || !contactPhone.trim() || contactLoading}
+                  className="btn-primary mt-6 w-full"
+                >
+                  {contactLoading ? 'Enviando...' : 'Confirmar interesse'}
+                  {!contactLoading && <ArrowRight className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={() => setShowContact(false)}
+                  className="mt-3 w-full text-center text-xs text-ink-muted hover:text-ink"
+                >
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <div className="text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-se-teal/10">
+                  <Check className="h-7 w-7 text-se-teal" />
+                </div>
+                <h3 className="mt-4 font-display text-xl font-semibold text-ink">
+                  Recebemos seu interesse!
+                </h3>
+                <p className="mt-2 text-sm text-ink-soft">
+                  Em breve entraremos em contato pelo número informado para alinhar os detalhes e enviar o link de pagamento da{' '}
+                  <strong className="text-ink">
+                    {selectedModality === 'social' ? 'Modalidade Social' : 'Protocolo Integral de Reconstrução'}
+                  </strong>.
+                </p>
+                <p className="mt-4 font-display text-sm italic text-se-violet">
+                  Toda transformação começa quando novas conexões são criadas.
+                </p>
+                <button
+                  onClick={() => setShowContact(false)}
+                  className="btn-secondary mt-6"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ─── DIAGNOSTIC MODAL ─── */}
       {showDiagnostic && (

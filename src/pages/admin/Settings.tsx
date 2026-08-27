@@ -4,20 +4,23 @@ import { AdminLayout } from '../../components/admin/AdminLayout'
 import { fetchSettings, saveSetting } from '../../lib/settings'
 import { supabase } from '../../lib/supabase'
 
-const FIELDS: { key: string; label: string; hint?: string; textarea?: boolean }[] = [
-  { key: 'analyst_name', label: 'Nome da analista' },
+const FIELDS_ANALYST1: { key: string; label: string; textarea?: boolean }[] = [
+  { key: 'analyst_name', label: 'Nome' },
   { key: 'analyst_title', label: 'Título profissional' },
   { key: 'analyst_bio', label: 'Apresentação breve', textarea: true },
+]
+
+const FIELDS_ANALYST2: { key: string; label: string; textarea?: boolean }[] = [
+  { key: 'analyst2_name', label: 'Nome' },
+  { key: 'analyst2_title', label: 'Título profissional' },
+  { key: 'analyst2_bio', label: 'Apresentação breve', textarea: true },
+]
+
+const FIELDS_GENERAL: { key: string; label: string; textarea?: boolean }[] = [
   { key: 'hero_message', label: 'Mensagem central da tela inicial' },
   { key: 'closing_message', label: 'Mensagem de encerramento' },
   { key: 'institutional_text', label: 'Texto institucional da metodologia', textarea: true },
   { key: 'privacy_email', label: 'E-mail para solicitação de exclusão (LGPD)' },
-]
-
-const FIELDS_ANALYST2: { key: string; label: string; hint?: string; textarea?: boolean }[] = [
-  { key: 'analyst2_name', label: 'Nome da analista' },
-  { key: 'analyst2_title', label: 'Título profissional' },
-  { key: 'analyst2_bio', label: 'Apresentação breve', textarea: true },
 ]
 
 export function Settings() {
@@ -47,10 +50,13 @@ export function Settings() {
   const handleSave = async () => {
     setSaveError(null)
     const results = []
-    for (const field of FIELDS) {
+    for (const field of FIELDS_ANALYST1) {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
     for (const field of FIELDS_ANALYST2) {
+      results.push(await saveSetting(field.key, values[field.key] ?? ''))
+    }
+    for (const field of FIELDS_GENERAL) {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
     results.push(await saveSetting('analyst_photo', photoUrl))
@@ -156,162 +162,192 @@ export function Settings() {
 
       <div className="card p-5 md:p-8">
         <h2 className="font-display text-xl font-semibold text-ink">
-          Perfil da analista
+          Equipe de analistas
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Este componente transmite autoridade e confiança na experiência do
-          participante. A foto é opcional.
+          Perfis que transmitem autoridade e confiança na experiência do participante.
         </p>
 
-        <div className="mt-6 flex flex-col gap-6 md:flex-row">
-          <div className="flex flex-col items-center gap-3 md:w-44">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt="Foto da analista"
-                className="h-36 w-36 rounded-3xl object-cover ring-2 ring-se-violet/20"
-              />
-            ) : (
-              <div className="bg-grad grid h-36 w-36 place-items-center rounded-3xl">
-                <ImagePlus className="h-10 w-10 text-white/80" />
-              </div>
-            )}
-            <label className="btn-secondary !px-4 !py-2 text-xs cursor-pointer">
-              {uploading ? 'Enviando…' : 'Enviar foto'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleUpload(file)
-                }}
-              />
-            </label>
-            {photoUrl && (
-              <button
-                onClick={() => setPhotoUrl('')}
-                className="text-xs text-ink-muted underline hover:text-red-600"
-              >
-                Remover foto
-              </button>
-            )}
-            {uploadError && (
-              <p className="text-center text-xs text-red-600">{uploadError}</p>
-            )}
+        <div className="mt-6 grid gap-8 lg:grid-cols-2">
+          {/* Analista 1 */}
+          <div>
+            <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-se-violet">
+              Analista principal
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              {photoUrl ? (
+                <img
+                  src={photoUrl}
+                  alt="Foto da analista"
+                  className="h-32 w-32 rounded-3xl object-cover ring-2 ring-se-violet/20"
+                />
+              ) : (
+                <div className="bg-grad grid h-32 w-32 place-items-center rounded-3xl">
+                  <ImagePlus className="h-9 w-9 text-white/80" />
+                </div>
+              )}
+              <label className="btn-secondary !px-4 !py-2 text-xs cursor-pointer">
+                {uploading ? 'Enviando…' : 'Enviar foto'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleUpload(file)
+                  }}
+                />
+              </label>
+              {photoUrl && (
+                <button
+                  onClick={() => setPhotoUrl('')}
+                  className="text-xs text-ink-muted underline hover:text-red-600"
+                >
+                  Remover foto
+                </button>
+              )}
+              {uploadError && (
+                <p className="text-center text-xs text-red-600">{uploadError}</p>
+              )}
+            </div>
+            <div className="mt-4 space-y-4">
+              {FIELDS_ANALYST1.map((field) => (
+                <div key={field.key}>
+                  <label className="label" htmlFor={`setting-${field.key}`}>
+                    {field.label}
+                  </label>
+                  {field.textarea ? (
+                    <textarea
+                      id={`setting-${field.key}`}
+                      rows={3}
+                      className="input resize-y"
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => set(field.key, e.target.value)}
+                    />
+                  ) : (
+                    <input
+                      id={`setting-${field.key}`}
+                      className="input"
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => set(field.key, e.target.value)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid flex-1 gap-5 sm:grid-cols-2">
-            {FIELDS.map((field) => (
-              <div
-                key={field.key}
-                className={field.textarea ? 'sm:col-span-2' : ''}
-              >
-                <label className="label" htmlFor={`setting-${field.key}`}>
-                  {field.label}
-                </label>
-                {field.textarea ? (
-                  <textarea
-                    id={`setting-${field.key}`}
-                    rows={3}
-                    className="input resize-y"
-                    value={values[field.key] ?? ''}
-                    onChange={(e) => set(field.key, e.target.value)}
-                  />
-                ) : (
-                  <input
-                    id={`setting-${field.key}`}
-                    className="input"
-                    value={values[field.key] ?? ''}
-                    onChange={(e) => set(field.key, e.target.value)}
-                  />
-                )}
-              </div>
-            ))}
+          {/* Analista 2 */}
+          <div>
+            <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-se-violet">
+              Segunda analista
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              {photoUrl2 ? (
+                <img
+                  src={photoUrl2}
+                  alt="Foto da segunda analista"
+                  className="h-32 w-32 rounded-3xl object-cover ring-2 ring-se-violet/20"
+                />
+              ) : (
+                <div className="bg-grad grid h-32 w-32 place-items-center rounded-3xl">
+                  <ImagePlus className="h-9 w-9 text-white/80" />
+                </div>
+              )}
+              <label className="btn-secondary !px-4 !py-2 text-xs cursor-pointer">
+                {uploading2 ? 'Enviando…' : 'Enviar foto'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleUpload2(file)
+                  }}
+                />
+              </label>
+              {photoUrl2 && (
+                <button
+                  onClick={() => setPhotoUrl2('')}
+                  className="text-xs text-ink-muted underline hover:text-red-600"
+                >
+                  Remover foto
+                </button>
+              )}
+              {uploadError2 && (
+                <p className="text-center text-xs text-red-600">{uploadError2}</p>
+              )}
+            </div>
+            <div className="mt-4 space-y-4">
+              {FIELDS_ANALYST2.map((field) => (
+                <div key={field.key}>
+                  <label className="label" htmlFor={`setting-${field.key}`}>
+                    {field.label}
+                  </label>
+                  {field.textarea ? (
+                    <textarea
+                      id={`setting-${field.key}`}
+                      rows={3}
+                      className="input resize-y"
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => set(field.key, e.target.value)}
+                    />
+                  ) : (
+                    <input
+                      id={`setting-${field.key}`}
+                      className="input"
+                      value={values[field.key] ?? ''}
+                      onChange={(e) => set(field.key, e.target.value)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Campos gerais */}
+      <div className="card mt-6 p-5 md:p-8">
+        <h2 className="font-display text-xl font-semibold text-ink">
+          Configurações gerais
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Textos e mensagens exibidos na plataforma para ambas as analistas.
+        </p>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          {FIELDS_GENERAL.map((field) => (
+            <div
+              key={field.key}
+              className={field.textarea ? 'sm:col-span-2' : ''}
+            >
+              <label className="label" htmlFor={`setting-${field.key}`}>
+                {field.label}
+              </label>
+              {field.textarea ? (
+                <textarea
+                  id={`setting-${field.key}`}
+                  rows={3}
+                  className="input resize-y"
+                  value={values[field.key] ?? ''}
+                  onChange={(e) => set(field.key, e.target.value)}
+                />
+              ) : (
+                <input
+                  id={`setting-${field.key}`}
+                  className="input"
+                  value={values[field.key] ?? ''}
+                  onChange={(e) => set(field.key, e.target.value)}
+                />
+              )}
+            </div>
+          ))}
         </div>
 
         <p className="mt-8 text-center text-xs uppercase tracking-[0.2em] text-ink-muted">
           Toda transformação começa quando novas conexões são criadas.
         </p>
-      </div>
-
-      {/* Segunda analista */}
-      <div className="card mt-6 p-5 md:p-8">
-        <h2 className="font-display text-xl font-semibold text-ink">
-          Segunda analista
-        </h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Perfil da segunda profissional vinculada à plataforma.
-        </p>
-
-        <div className="mt-6 flex flex-col gap-6 md:flex-row">
-          <div className="flex flex-col items-center gap-3 md:w-44">
-            {photoUrl2 ? (
-              <img
-                src={photoUrl2}
-                alt="Foto da segunda analista"
-                className="h-36 w-36 rounded-3xl object-cover ring-2 ring-se-violet/20"
-              />
-            ) : (
-              <div className="bg-grad grid h-36 w-36 place-items-center rounded-3xl">
-                <ImagePlus className="h-10 w-10 text-white/80" />
-              </div>
-            )}
-            <label className="btn-secondary !px-4 !py-2 text-xs cursor-pointer">
-              {uploading2 ? 'Enviando…' : 'Enviar foto'}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleUpload2(file)
-                }}
-              />
-            </label>
-            {photoUrl2 && (
-              <button
-                onClick={() => setPhotoUrl2('')}
-                className="text-xs text-ink-muted underline hover:text-red-600"
-              >
-                Remover foto
-              </button>
-            )}
-            {uploadError2 && (
-              <p className="text-center text-xs text-red-600">{uploadError2}</p>
-            )}
-          </div>
-
-          <div className="grid flex-1 gap-5 sm:grid-cols-2">
-            {FIELDS_ANALYST2.map((field) => (
-              <div
-                key={field.key}
-                className={field.textarea ? 'sm:col-span-2' : ''}
-              >
-                <label className="label" htmlFor={`setting-${field.key}`}>
-                  {field.label}
-                </label>
-                {field.textarea ? (
-                  <textarea
-                    id={`setting-${field.key}`}
-                    rows={3}
-                    className="input resize-y"
-                    value={values[field.key] ?? ''}
-                    onChange={(e) => set(field.key, e.target.value)}
-                  />
-                ) : (
-                  <input
-                    id={`setting-${field.key}`}
-                    className="input"
-                    value={values[field.key] ?? ''}
-                    onChange={(e) => set(field.key, e.target.value)}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </AdminLayout>
   )

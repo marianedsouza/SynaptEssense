@@ -24,10 +24,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface LandingProps {
   analystProfile?: AnalystProfile
+  analystProfile2?: AnalystProfile
   heroMessage: string
 }
 
-export function Landing({ analystProfile, heroMessage }: LandingProps) {
+export function Landing({ analystProfile, analystProfile2, heroMessage }: LandingProps) {
   const navigate = useNavigate()
   const [showMethodology, setShowMethodology] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -237,8 +238,9 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
         </div>
       </main>
 
-      <div className="relative z-10 flex justify-center px-6 pb-12">
+      <div className="relative z-10 flex flex-col items-center gap-4 px-6 pb-12 sm:flex-row sm:justify-center">
         <AnalystCard profile={analystProfile} compact />
+        {analystProfile2 && <AnalystCard profile={analystProfile2} compact />}
       </div>
 
       <footer className="relative z-10 pb-8 text-center">

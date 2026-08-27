@@ -6,6 +6,7 @@ import type { AnalystProfile } from '../lib/types'
 interface SettingsContextValue {
   settings: Record<string, string>
   analystProfile: AnalystProfile
+  analystProfile2: AnalystProfile | null
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -16,6 +17,7 @@ const SettingsContext = createContext<SettingsContextValue>({
     photoUrl: '',
     bio: '',
   },
+  analystProfile2: null,
 })
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -42,8 +44,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     bio: settings.analyst_bio ?? '',
   }
 
+  const analystProfile2: AnalystProfile | null = settings.analyst2_name
+    ? {
+        name: settings.analyst2_name,
+        title: settings.analyst2_title ?? '',
+        photoUrl: settings.analyst2_photo ?? '',
+        bio: settings.analyst2_bio ?? '',
+      }
+    : null
+
   return (
-    <SettingsContext.Provider value={{ settings, analystProfile }}>
+    <SettingsContext.Provider value={{ settings, analystProfile, analystProfile2 }}>
       {children}
     </SettingsContext.Provider>
   )

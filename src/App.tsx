@@ -39,10 +39,11 @@ function Fallback() {
 }
 
 function LandingRoute() {
-  const { settings, analystProfile } = useSettings()
+  const { settings, analystProfile, analystProfile2 } = useSettings()
   return (
     <Landing
       analystProfile={analystProfile}
+      analystProfile2={analystProfile2 ?? undefined}
       heroMessage={
         settings.hero_message ??
         'Toda transformação começa quando novas conexões são criadas.'

@@ -1,17 +1,36 @@
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, LogOut, Settings, Users } from 'lucide-react'
+import { LayoutDashboard, LogOut, Settings, Sparkles, Users } from 'lucide-react'
 import { Logo } from '../Logo'
 import { supabase } from '../../lib/supabase'
 
 const navItems = [
-  { to: '/admin', label: 'Visão geral', icon: LayoutDashboard, end: true },
-  { to: '/admin/participantes', label: 'Participantes', icon: Users, end: true },
-  { to: '/admin/configuracoes', label: 'Configurações', icon: Settings, end: true },
+  { to: '/admin', label: 'Vis\u00e3o geral', icon: LayoutDashboard, end: true, badge: false },
+  { to: '/admin/interesses', label: 'Interesses', icon: Sparkles, end: true, badge: true },
+  { to: '/admin/participantes', label: 'Participantes', icon: Users, end: true, badge: false },
+  { to: '/admin/configuracoes', label: 'Configura\u00e7\u00f5es', icon: Settings, end: true, badge: false },
 ]
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const [unseenCount, setUnseenCount] = useState(0)
+
+  useEffect(() => {
+    async function checkUnseen() {
+      try {
+        const lastSeen = localStorage.getItem('synapt_leads_last_seen') || '2000-01-01T00:00:00Z'
+        const { count } = await supabase
+          .from('protocol_leads')
+          .select('*', { count: 'exact', head: true })
+          .gt('created_at', lastSeen)
+        setUnseenCount(count ?? 0)
+      } catch {
+        setUnseenCount(0)
+      }
+    }
+    checkUnseen()
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -43,6 +62,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             >
               <item.icon className="h-4 w-4" />
               {item.label}
+              {item.badge && unseenCount > 0 && (
+                <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-se-violet px-1.5 text-[10px] font-bold text-white">
+                  {unseenCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -76,7 +100,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${
+                  `relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${
                     isActive
                       ? 'bg-se-lavender text-se-violet-dark'
                       : 'text-ink-soft hover:text-ink'
@@ -85,6 +109,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               >
                 <item.icon className="h-3.5 w-3.5" />
                 {item.label}
+                {item.badge && unseenCount > 0 && (
+                  <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-se-violet px-1 text-[9px] font-bold text-white">
+                    {unseenCount}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

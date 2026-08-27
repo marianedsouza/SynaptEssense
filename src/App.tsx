@@ -26,6 +26,9 @@ const ParticipantDetail = lazy(() =>
 const Settings = lazy(() =>
   import('./pages/admin/Settings').then((m) => ({ default: m.Settings })),
 )
+const Leads = lazy(() =>
+  import('./pages/admin/Leads').then((m) => ({ default: m.Leads })),
+)
 
 function Fallback() {
   return (
@@ -77,6 +80,10 @@ function App() {
             <Route
               path="/admin/participantes/:id"
               element={<AdminRoute><ParticipantDetail /></AdminRoute>}
+            />
+            <Route
+              path="/admin/interesses"
+              element={<AdminRoute><Leads /></AdminRoute>}
             />
             <Route
               path="/admin/configuracoes"

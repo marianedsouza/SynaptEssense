@@ -152,6 +152,13 @@ export function Protocol() {
         <button onClick={() => navigate('/')} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Voltar
+        </button>
       </header>
 
       {/* ─── HERO ─── */}

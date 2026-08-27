@@ -4,7 +4,9 @@ import {
   ArrowRight,
   FileDown,
   FileSpreadsheet,
+  Phone,
   Search,
+  Sparkles,
   Trash2,
   UserRound,
 } from 'lucide-react'
@@ -15,6 +17,7 @@ import { buildQuestionList } from '../../lib/questionUtils'
 import { participantPosition } from '../../lib/questionUtils'
 import type { ParticipantPosition } from '../../lib/questionUtils'
 import { AXIS } from '../../lib/axes'
+import { supabase } from '../../lib/supabase'
 import type { Participant } from '../../lib/types'
 
 type Filter = 'todos' | 'iniciado' | 'em_andamento' | 'concluido'
@@ -69,6 +72,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('todos')
+  const [leads, setLeads] = useState<{ id: string; name: string; phone: string; modality: string; created_at: string }[]>([])
+  const [leadsLoading, setLeadsLoading] = useState(true)
 
   const load = useCallback(async () => {
     try {
@@ -81,9 +86,24 @@ export function Dashboard() {
     }
   }, [])
 
+  const loadLeads = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('protocol_leads')
+        .select('*')
+        .order('created_at', { ascending: false })
+      setLeads(data ?? [])
+    } catch {
+      setLeads([])
+    } finally {
+      setLeadsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     load()
-  }, [load])
+    loadLeads()
+  }, [load, loadLeads])
 
   const positions = useMemo(() => {
     const map: Record<string, ParticipantPosition> = {}
@@ -224,6 +244,88 @@ export function Dashboard() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card mt-4 overflow-hidden md:mt-8">
+        <div className="flex flex-col gap-3 border-b border-ink/5 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-se-violet" />
+            <h2 className="font-display text-lg font-semibold text-ink md:text-xl">
+              Interesses no Protocolo
+            </h2>
+            <span className="rounded-full bg-se-lavender px-2.5 py-0.5 text-xs font-medium text-se-violet">
+              {leads.length}
+            </span>
+          </div>
+        </div>
+        {leadsLoading ? (
+          <div className="flex justify-center py-10">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-se-violet border-t-transparent" />
+          </div>
+        ) : leads.length === 0 ? (
+          <div className="px-5 py-10 text-center text-sm text-ink-muted">
+            Nenhum interesse registrado ainda.
+          </div>
+        ) : (
+          <>
+            {/* Mobile */}
+            <div className="sm:hidden">
+              {leads.map((lead) => (
+                <div key={lead.id} className="border-b border-ink/5 px-4 py-3 last:border-b-0">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-ink">{lead.name}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <Phone className="h-3 w-3 text-ink-muted" />
+                        <span className="text-xs text-ink-muted">{lead.phone}</span>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${lead.modality === 'integral' ? 'bg-se-lavender text-se-violet' : 'bg-se-sky text-se-teal'}`}>
+                      {lead.modality === 'integral' ? 'Integral' : 'Social'}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-[11px] text-ink-muted">
+                    {new Date(lead.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
+                    <th className="px-5 py-3 font-semibold">Nome</th>
+                    <th className="px-5 py-3 font-semibold">Telefone</th>
+                    <th className="px-5 py-3 font-semibold">Modalidade</th>
+                    <th className="px-5 py-3 font-semibold">Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr key={lead.id} className="border-b border-ink/5 transition-colors hover:bg-se-mist/60">
+                      <td className="px-5 py-3 font-medium text-ink">{lead.name}</td>
+                      <td className="px-5 py-3">
+                        <a href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-ink-soft hover:text-se-teal transition">
+                          <Phone className="h-3.5 w-3.5" />
+                          {lead.phone}
+                        </a>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${lead.modality === 'integral' ? 'bg-se-lavender text-se-violet' : 'bg-se-sky text-se-teal'}`}>
+                          {lead.modality === 'integral' ? 'Protocolo Integral' : 'Modalidade Social'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-ink-muted">
+                        {new Date(lead.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="card mt-4 overflow-hidden md:mt-8">

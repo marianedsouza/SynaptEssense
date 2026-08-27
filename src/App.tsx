@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
 import { Landing } from './pages/participant/Landing'
+import { Protocol } from './pages/participant/Protocol'
 import { Reception } from './pages/participant/Reception'
 import { BeforeStart } from './pages/participant/BeforeStart'
 import { Consent } from './pages/participant/Consent'
@@ -58,6 +59,7 @@ function App() {
         <Suspense fallback={<Fallback />}>
           <Routes>
             <Route path="/" element={<LandingRoute />} />
+            <Route path="/protocolo" element={<Protocol />} />
             <Route path="/recepcao" element={<Reception />} />
             <Route path="/antes-de-comecar" element={<BeforeStart />} />
             <Route path="/consentimento" element={<Consent />} />

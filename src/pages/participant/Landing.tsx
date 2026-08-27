@@ -8,6 +8,7 @@ import {
   Link2,
   MessageCircle,
   Share2,
+  Sparkles,
   X,
 } from 'lucide-react'
 import { NeuralBackground } from '../../components/NeuralBackground'
@@ -150,6 +151,13 @@ export function Landing({ analystProfile, heroMessage }: LandingProps) {
             >
               Iniciar levantamento
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </button>
+            <button
+              onClick={() => navigate('/protocolo')}
+              className="btn-secondary"
+            >
+              <Sparkles className="h-4 w-4" />
+              Protocolo de Resgate de Identidade
             </button>
             <button
               onClick={() => setShowMethodology(true)}

@@ -14,6 +14,12 @@ const FIELDS: { key: string; label: string; hint?: string; textarea?: boolean }[
   { key: 'privacy_email', label: 'E-mail para solicitação de exclusão (LGPD)' },
 ]
 
+const FIELDS_ANALYST2: { key: string; label: string; hint?: string; textarea?: boolean }[] = [
+  { key: 'analyst2_name', label: 'Nome da analista' },
+  { key: 'analyst2_title', label: 'Título profissional' },
+  { key: 'analyst2_bio', label: 'Apresentação breve', textarea: true },
+]
+
 export function Settings() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
@@ -21,12 +27,16 @@ export function Settings() {
   const [uploading, setUploading] = useState(false)
   const [photoUrl, setPhotoUrl] = useState('')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploading2, setUploading2] = useState(false)
+  const [photoUrl2, setPhotoUrl2] = useState('')
+  const [uploadError2, setUploadError2] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchSettings().then((settings) => {
       setValues(settings)
       setPhotoUrl(settings.analyst_photo ?? '')
+      setPhotoUrl2(settings.analyst2_photo ?? '')
       setLoading(false)
     })
   }, [])
@@ -40,7 +50,11 @@ export function Settings() {
     for (const field of FIELDS) {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
+    for (const field of FIELDS_ANALYST2) {
+      results.push(await saveSetting(field.key, values[field.key] ?? ''))
+    }
     results.push(await saveSetting('analyst_photo', photoUrl))
+    results.push(await saveSetting('analyst2_photo', photoUrl2))
     const failed = results.find((r) => !r.ok)
     if (failed) {
       setSaveError(`Não foi possível salvar: ${failed.error}`)
@@ -70,6 +84,30 @@ export function Settings() {
       const { data } = supabase.storage.from('assets').getPublicUrl(path)
       setPhotoUrl(data.publicUrl)
       setUploading(false)
+    },
+    [],
+  )
+
+  const handleUpload2 = useCallback(
+    async (file: File) => {
+      if (!file) return
+      setUploading2(true)
+      setUploadError2(null)
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const path = `analyst2/${Date.now()}.${ext}`
+      const { error } = await supabase.storage
+        .from('assets')
+        .upload(path, file, { upsert: false })
+      if (error) {
+        setUploadError2(
+          'Não foi possível enviar a imagem. Verifique se o bucket "assets" existe e a política de upload.',
+        )
+        setUploading2(false)
+        return
+      }
+      const { data } = supabase.storage.from('assets').getPublicUrl(path)
+      setPhotoUrl2(data.publicUrl)
+      setUploading2(false)
     },
     [],
   )
@@ -196,6 +234,84 @@ export function Settings() {
         <p className="mt-8 text-center text-xs uppercase tracking-[0.2em] text-ink-muted">
           Toda transformação começa quando novas conexões são criadas.
         </p>
+      </div>
+
+      {/* Segunda analista */}
+      <div className="card mt-6 p-5 md:p-8">
+        <h2 className="font-display text-xl font-semibold text-ink">
+          Segunda analista
+        </h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Perfil da segunda profissional vinculada à plataforma.
+        </p>
+
+        <div className="mt-6 flex flex-col gap-6 md:flex-row">
+          <div className="flex flex-col items-center gap-3 md:w-44">
+            {photoUrl2 ? (
+              <img
+                src={photoUrl2}
+                alt="Foto da segunda analista"
+                className="h-36 w-36 rounded-3xl object-cover ring-2 ring-se-violet/20"
+              />
+            ) : (
+              <div className="bg-grad grid h-36 w-36 place-items-center rounded-3xl">
+                <ImagePlus className="h-10 w-10 text-white/80" />
+              </div>
+            )}
+            <label className="btn-secondary !px-4 !py-2 text-xs cursor-pointer">
+              {uploading2 ? 'Enviando…' : 'Enviar foto'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) handleUpload2(file)
+                }}
+              />
+            </label>
+            {photoUrl2 && (
+              <button
+                onClick={() => setPhotoUrl2('')}
+                className="text-xs text-ink-muted underline hover:text-red-600"
+              >
+                Remover foto
+              </button>
+            )}
+            {uploadError2 && (
+              <p className="text-center text-xs text-red-600">{uploadError2}</p>
+            )}
+          </div>
+
+          <div className="grid flex-1 gap-5 sm:grid-cols-2">
+            {FIELDS_ANALYST2.map((field) => (
+              <div
+                key={field.key}
+                className={field.textarea ? 'sm:col-span-2' : ''}
+              >
+                <label className="label" htmlFor={`setting-${field.key}`}>
+                  {field.label}
+                </label>
+                {field.textarea ? (
+                  <textarea
+                    id={`setting-${field.key}`}
+                    rows={3}
+                    className="input resize-y"
+                    value={values[field.key] ?? ''}
+                    onChange={(e) => set(field.key, e.target.value)}
+                  />
+                ) : (
+                  <input
+                    id={`setting-${field.key}`}
+                    className="input"
+                    value={values[field.key] ?? ''}
+                    onChange={(e) => set(field.key, e.target.value)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   )

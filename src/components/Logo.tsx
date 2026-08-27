@@ -1,4 +1,4 @@
-import synaptLogo from '../assets/synapt logo.png'
+import synaptLogo from '../assets/logo synapt essence 2.png'
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Phone, Sparkles, Trash2, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Phone, Sparkles, Trash2, CheckCircle, XCircle, Clock, CalendarDays } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 
@@ -286,13 +286,22 @@ export function Leads() {
                   </div>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-[11px] text-ink-muted">{fmtDate(lead.created_at)}</span>
-                    <button
-                      onClick={() => handleDelete(lead.id, lead.name)}
-                      className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
-                      title="Excluir"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        to={`/admin/interesses/${lead.id}`}
+                        className="rounded-full border border-se-violet/20 p-1.5 text-se-violet transition hover:bg-se-lavender"
+                        title="Ver agenda de atendimentos"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5" />
+                      </Link>
+                      <button
+                        onClick={() => handleDelete(lead.id, lead.name)}
+                        className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -338,13 +347,23 @@ export function Leads() {
                       </td>
                       <td className="px-5 py-3 text-ink-muted">{fmtDate(lead.created_at)}</td>
                       <td className="px-5 py-3 text-right">
-                        <button
-                          onClick={() => handleDelete(lead.id, lead.name)}
-                          className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 hover:border-red-300"
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            to={`/admin/interesses/${lead.id}`}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-se-violet/20 px-3 py-1.5 text-xs font-medium text-se-violet transition hover:bg-se-lavender"
+                            title="Ver agenda de atendimentos"
+                          >
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            Agenda
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(lead.id, lead.name)}
+                            className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 hover:border-red-300"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

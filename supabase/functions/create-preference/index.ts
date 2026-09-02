@@ -40,6 +40,9 @@ serve(async (req) => {
         email,
         phone: phone ? { number: phone } : undefined,
       },
+      payment_methods: {
+        installments: 10,
+      },
       back_urls: {
         success: `${origin}/minha-area?status=approved`,
         pending: `${origin}/minha-area?status=pending`,

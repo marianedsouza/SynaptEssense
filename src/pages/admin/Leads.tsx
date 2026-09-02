@@ -32,9 +32,21 @@ const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle; colo
   error: { label: 'Erro', icon: XCircle, color: 'text-red-600 bg-red-50' },
 }
 
+function monthKey(iso: string) {
+  return iso.slice(0, 7)
+}
+
+function monthLabel(key: string) {
+  const [year, month] = key.split('-').map(Number)
+  const date = new Date(year, month - 1, 1)
+  const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
 export function Leads() {
   const [leads, setLeads] = useState<LeadWithPayment[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
 
   const load = useCallback(async () => {
     try {
@@ -104,8 +116,15 @@ export function Leads() {
     )
   }
 
-  const paidLeads = leads.filter((l) => l.payment?.status === 'approved')
-  const totalRevenue = paidLeads.reduce((sum, l) => sum + (l.payment?.amount ?? 0), 0)
+  const availableMonths = Array.from(new Set(leads.map((l) => monthKey(l.created_at))))
+    .sort()
+    .reverse()
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const activeMonth = availableMonths.includes(selectedMonth) ? selectedMonth : currentMonth
+
+  const filteredLeads = activeMonth === 'todos' ? leads : leads.filter((l) => monthKey(l.created_at) === activeMonth)
+  const filteredPaid = filteredLeads.filter((l) => l.payment?.status === 'approved')
+  const filteredRevenue = filteredPaid.reduce((sum, l) => sum + (l.payment?.amount ?? 0), 0)
 
   return (
     <AdminLayout>
@@ -125,59 +144,72 @@ export function Leads() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5 mb-6">
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Total</div>
-          <div className="mt-1 font-display text-2xl font-semibold text-se-violet">{leads.length}</div>
+          <div className="mt-1 font-display text-2xl font-semibold text-se-violet">{filteredLeads.length}</div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Social</div>
           <div className="mt-1 font-display text-2xl font-semibold text-se-teal">
-            {leads.filter((l) => l.modality === 'social').length}
+            {filteredLeads.filter((l) => l.modality === 'social').length}
           </div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Integral</div>
           <div className="mt-1 font-display text-2xl font-semibold text-se-violet">
-            {leads.filter((l) => l.modality === 'integral').length}
+            {filteredLeads.filter((l) => l.modality === 'integral').length}
           </div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Pagos</div>
           <div className="mt-1 font-display text-2xl font-semibold text-se-teal">
-            {paidLeads.length}
+            {filteredPaid.length}
           </div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Receita</div>
           <div className="mt-1 font-display text-2xl font-semibold text-ink">
-            {fmtCurrency(totalRevenue)}
+            {fmtCurrency(filteredRevenue)}
           </div>
         </div>
       </div>
 
       {/* Table */}
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-ink/5 p-4">
-          <Sparkles className="h-5 w-5 text-se-violet" />
-          <h2 className="font-display text-lg font-semibold text-ink">
-            Todos os interesses
-          </h2>
-          <span className="rounded-full bg-se-lavender px-2.5 py-0.5 text-xs font-medium text-se-violet">
-            {leads.length}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/5 p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-se-violet" />
+            <h2 className="font-display text-lg font-semibold text-ink">
+              {activeMonth === 'todos' ? 'Todos os interesses' : `Interesses de ${monthLabel(activeMonth)}`}
+            </h2>
+            <span className="rounded-full bg-se-lavender px-2.5 py-0.5 text-xs font-medium text-se-violet">
+              {filteredLeads.length}
+            </span>
+          </div>
+          <select
+            value={activeMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink focus:border-se-violet focus:outline-none"
+          >
+            <option value={monthKey(new Date().toISOString())}>Mês atual ({monthLabel(monthKey(new Date().toISOString()))})</option>
+            {availableMonths.map((m) => (
+              <option key={m} value={m}>{monthLabel(m)}</option>
+            ))}
+            <option value="todos">Todos os meses</option>
+          </select>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-se-violet border-t-transparent" />
           </div>
-        ) : leads.length === 0 ? (
+        ) : filteredLeads.length === 0 ? (
           <div className="px-5 py-16 text-center text-sm text-ink-muted">
-            Nenhum interesse registrado ainda.
+            Nenhum interesse registrado neste mês.
           </div>
         ) : (
           <>
             {/* Mobile */}
             <div className="sm:hidden">
-              {leads.map((lead) => (
+              {filteredLeads.map((lead) => (
                 <div key={lead.id} className="border-b border-ink/5 px-4 py-4 last:border-b-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -230,7 +262,7 @@ export function Leads() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.map((lead) => (
+                  {filteredLeads.map((lead) => (
                     <tr key={lead.id} className="border-b border-ink/5 transition-colors hover:bg-se-mist/60">
                       <td className="px-5 py-3 font-medium text-ink">{lead.name}</td>
                       <td className="px-5 py-3 text-ink-soft">{lead.phone}</td>

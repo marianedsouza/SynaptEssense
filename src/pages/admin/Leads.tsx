@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Phone, Sparkles, Trash2, CheckCircle, XCircle, Clock } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
@@ -261,7 +262,9 @@ export function Leads() {
                 <div key={lead.id} className="border-b border-ink/5 px-4 py-4 last:border-b-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="text-sm font-medium text-ink">{lead.name}</div>
+                      <Link to={`/admin/interesses/${lead.id}`} className="text-sm font-medium text-ink hover:text-se-violet">
+                        {lead.name}
+                      </Link>
                       <a
                         href={`https://wa.me/55${lead.phone.replace(/\D/g, '')}`}
                         target="_blank"
@@ -312,7 +315,11 @@ export function Leads() {
                 <tbody>
                   {filteredLeads.map((lead) => (
                     <tr key={lead.id} className="border-b border-ink/5 transition-colors hover:bg-se-mist/60">
-                      <td className="px-5 py-3 font-medium text-ink">{lead.name}</td>
+                      <td className="px-5 py-3">
+                        <Link to={`/admin/interesses/${lead.id}`} className="font-medium text-ink hover:text-se-violet">
+                          {lead.name}
+                        </Link>
+                      </td>
                       <td className="px-5 py-3 text-ink-soft">{lead.phone}</td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${lead.modality === 'integral' ? 'bg-se-lavender text-se-violet' : 'bg-se-sky text-se-teal'}`}>

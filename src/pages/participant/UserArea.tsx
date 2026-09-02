@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Check, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User } from 'lucide-react'
+import { CalendarDays, Check, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User, Pencil } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
 import { useSettings } from '../../context/SettingsContext'
+import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planDurationMonths, planQualityLabel } from '../../lib/protocol'
+import { fetchSessionsByLead, type SessionRecord } from '../../lib/sessions'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -29,11 +31,6 @@ interface PayRecord {
   created_at: string
 }
 
-const MODALITY_LABELS = {
-  social: 'Modalidade Social',
-  integral: 'Protocolo Integral de Reconstrução',
-} as const
-
 function fmtCurrency(value: number) {
   if (!value || value <= 0) return 'R$ 0,00'
   return `R$ ${value.toFixed(2).replace('.', ',')}`
@@ -51,7 +48,14 @@ export function UserArea() {
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [payments, setPayments] = useState<PayRecord[]>([])
+  const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [switchOpen, setSwitchOpen] = useState(false)
+  const [switchModality, setSwitchModality] = useState<'social' | 'integral'>('social')
+  const [switchPlan, setSwitchPlan] = useState<'mensal' | 'completo'>('completo')
+  const [switchError, setSwitchError] = useState<string | null>(null)
+  const [savingSwitch, setSavingSwitch] = useState(false)
 
   const statusParam = searchParams.get('status')
 
@@ -81,6 +85,10 @@ export function UserArea() {
 
     setLeads((leadsRes.data ?? []) as Lead[])
     setPayments((paysRes.data ?? []) as PayRecord[])
+    const firstLead = (leadsRes.data?.[0] as Lead | undefined)
+    if (firstLead) {
+      setSessions(await fetchSessionsByLead(firstLead.id))
+    }
     setLoading(false)
   }, [navigate])
 
@@ -160,9 +168,43 @@ export function UserArea() {
     }
   }
 
+  async function handleSwitchProtocol() {
+    if (!lastLead) return
+    setSavingSwitch(true)
+    setSwitchError(null)
+    const { error } = await supabase
+      .from('protocol_leads')
+      .update({ modality: switchModality, plan: switchPlan, updated_at: new Date().toISOString() })
+      .eq('id', lastLead.id)
+    if (error) {
+      setSwitchError(error.message)
+      setSavingSwitch(false)
+      return
+    }
+    setSwitchOpen(false)
+    setSavingSwitch(false)
+    await load()
+  }
+
   const lastLead = leads[0]
   const isPaid = payments.some((p) => p.status === 'approved')
   const hasPending = payments.some((p) => p.status === 'pending')
+
+  const approvedPayments = payments.filter((p) => p.status === 'approved')
+  const totalPaid = approvedPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+
+  const displayPayments = approvedPayments.length
+    ? approvedPayments
+    : payments.filter((p) => p.status === 'pending').slice(0, 1)
+
+  const realized = sessions.filter((s) => s.status === 'realizada').length
+  const remaining = Math.max(PROTOCOL_TOTAL_SESSIONS - realized, 0)
+  const planMonths = lastLead ? planDurationMonths(lastLead.plan) : 0
+
+  const protocolStart = lastLead ? new Date(lastLead.created_at).getTime() : 0
+  const protocolEnd = protocolStart ? new Date(protocolStart + planMonths * 30 * 24 * 60 * 60 * 1000) : null
+  const periodEnded = protocolEnd ? new Date() > protocolEnd : false
+  const finished = isPaid && (remaining <= 0 || periodEnded)
 
   const pricePerSession = lastLead
     ? lastLead.modality === 'social'
@@ -278,16 +320,20 @@ export function UserArea() {
                 )}
                 <div>
                   <div className="text-sm font-semibold text-ink">
-                    {lastLead.plan === 'mensal' ? 'Plano mensal' : 'Plano completo'} • {MODALITY_LABELS[lastLead.modality]}
+                    {planQualityLabel(lastLead.plan)} • {MODALITY_LABELS[lastLead.modality]}
                   </div>
                   <div className="text-xs text-ink-muted">
-                    {isPaid ? 'Pagamento efetuado' : 'Conclua o pagamento para ativar seu protocolo'}
+                    {!isPaid
+                      ? 'Conclua o pagamento para ativar seu protocolo'
+                      : finished
+                        ? 'Protocolo concluído — renove para continuar'
+                        : 'Protocolo em andamento'}
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
-                {isPaid ? (
+                {isPaid && finished && (
                   <button
                     onClick={() => handleCreatePayment(lastLead.plan)}
                     disabled={paying}
@@ -296,21 +342,74 @@ export function UserArea() {
                     {paying ? 'Abrindo pagamento…' : 'Renovar assinatura'}
                     <RefreshCw className="h-4 w-4" />
                   </button>
-                ) : (
-                  <button
-                    onClick={() => handleCreatePayment(lastLead.plan)}
-                    disabled={paying}
-                    className="btn-primary !px-6"
-                  >
-                    {paying ? 'Abrindo pagamento…' : 'Fazer pagamento'}
-                    <CreditCard className="h-4 w-4" />
-                  </button>
+                )}
+                {isPaid && !finished && (
+                  <span className="rounded-xl border border-se-teal/30 bg-se-teal/10 px-4 py-2 text-xs font-medium text-se-teal">
+                    Em andamento • {remaining} sessão{remaining === 1 ? '' : 's'} restante{remaining === 1 ? '' : 's'}
+                  </span>
+                )}
+                {!isPaid && (
+                  <>
+                    <button
+                      onClick={() => handleCreatePayment(lastLead.plan)}
+                      disabled={paying}
+                      className="btn-primary !px-6"
+                    >
+                      {paying ? 'Abrindo pagamento…' : 'Fazer pagamento'}
+                      <CreditCard className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setSwitchOpen((v) => !v)}
+                      disabled={paying}
+                      className="btn-secondary !px-6"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Trocar protocolo
+                    </button>
+                  </>
                 )}
                 {payError && (
                   <p className="text-right text-xs text-red-600">{payError}</p>
                 )}
               </div>
             </div>
+
+            {switchOpen && !isPaid && (
+              <div className="mt-5 rounded-2xl border border-se-violet/20 bg-se-lavender/20 p-5">
+                <div className="mb-3 text-sm font-semibold text-ink">Trocar de protocolo antes de pagar</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="label">Modalidade</label>
+                    <select
+                      className="input"
+                      value={switchModality}
+                      onChange={(e) => setSwitchModality(e.target.value as 'social' | 'integral')}
+                    >
+                      <option value="social">Modalidade Social</option>
+                      <option value="integral">Protocolo Integral de Reconstrução</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Plano</label>
+                    <select
+                      className="input"
+                      value={switchPlan}
+                      onChange={(e) => setSwitchPlan(e.target.value as 'mensal' | 'completo')}
+                    >
+                      <option value="mensal">Plano mensal</option>
+                      <option value="completo">Plano completo</option>
+                    </select>
+                  </div>
+                </div>
+                {switchError && <p className="mt-2 text-xs text-red-600">{switchError}</p>}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button onClick={handleSwitchProtocol} disabled={savingSwitch} className="btn-primary">
+                    {savingSwitch ? 'Salvando…' : 'Salvar nova escolha'}
+                  </button>
+                  <button onClick={() => setSwitchOpen(false)} className="btn-secondary">Cancelar</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -346,7 +445,7 @@ export function UserArea() {
                 <div className="rounded-2xl border border-ink/5 bg-se-mist/60 p-4">
                   <div className="text-xs text-ink-muted">Plano contratado</div>
                   <div className="mt-1 font-display text-base font-semibold capitalize text-ink">
-                    {lastLead.plan === 'mensal' ? 'Plano mensal' : 'Plano completo'}
+                    {planQualityLabel(lastLead.plan)}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-ink/5 bg-se-mist/60 p-4">
@@ -356,8 +455,16 @@ export function UserArea() {
                   </div>
                 </div>
                 <div className="rounded-2xl border border-ink/5 bg-se-mist/60 p-4">
-                  <div className="text-xs text-ink-muted">Duração</div>
-                  <div className="mt-1 font-display text-base font-semibold text-ink">90 dias / 12 encontros</div>
+                  <div className="text-xs text-ink-muted">Duração do plano</div>
+                  <div className="mt-1 font-display text-base font-semibold text-ink">
+                    {planMonths} {planMonths === 1 ? 'mês' : 'meses'}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-ink/5 bg-se-mist/60 p-4">
+                  <div className="text-xs text-ink-muted">Sessões do protocolo</div>
+                  <div className="mt-1 font-display text-base font-semibold text-ink">
+                    {PROTOCOL_TOTAL_SESSIONS} encontros
+                  </div>
                 </div>
               </div>
 
@@ -391,7 +498,26 @@ export function UserArea() {
                 <h2 className="font-display text-lg font-semibold text-ink">Valores pagos</h2>
               </div>
 
-              {payments.length === 0 ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-ink/5 p-3 text-center">
+                  <div className="text-[11px] text-ink-muted">Total pago</div>
+                  <div className="mt-1 font-display text-lg font-semibold text-se-teal">{fmtCurrency(totalPaid)}</div>
+                </div>
+                <div className="rounded-xl border border-ink/5 p-3 text-center">
+                  <div className="text-[11px] text-ink-muted">Sessões realizadas</div>
+                  <div className="mt-1 font-display text-lg font-semibold text-ink">
+                    {realized} / {PROTOCOL_TOTAL_SESSIONS}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-ink/5 p-3 text-center">
+                  <div className="text-[11px] text-ink-muted">Meses do plano</div>
+                  <div className="mt-1 font-display text-lg font-semibold text-ink">
+                    {planMonths} {planMonths === 1 ? 'mês' : 'meses'}
+                  </div>
+                </div>
+              </div>
+
+              {displayPayments.length === 0 ? (
                 <p className="mt-6 text-sm text-ink-muted">Nenhum pagamento registrado ainda.</p>
               ) : (
                 <div className="mt-5 overflow-x-auto">
@@ -406,7 +532,7 @@ export function UserArea() {
                       </tr>
                     </thead>
                     <tbody>
-                      {payments.map((p) => (
+                      {displayPayments.map((p) => (
                         <tr key={p.id} className="border-b border-ink/5 last:border-b-0">
                           <td className="px-3 py-3 text-ink-soft">{fmtDate(p.created_at)}</td>
                           <td className="px-3 py-3 text-ink-soft">{MODALITY_LABELS[p.modality]}</td>
@@ -421,6 +547,37 @@ export function UserArea() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+
+            {/* Agenda */}
+            <div className="card mt-6 p-6 md:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-se-violet" />
+                  <h2 className="font-display text-lg font-semibold text-ink">Minha agenda de atendimentos</h2>
+                </div>
+                <span className="rounded-full bg-se-lavender px-3 py-1 text-xs font-medium text-se-violet">
+                  {remaining} sessão{remaining === 1 ? '' : 's'} restante{remaining === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              {sessions.length === 0 ? (
+                <p className="mt-6 text-sm text-ink-muted">
+                  Seus atendimentos aparecerão aqui conforme forem agendados pelo analista.
+                </p>
+              ) : (
+                <div className="mt-5 space-y-2.5">
+                  {sessions.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-ink/5 bg-se-mist/50 px-4 py-3">
+                      <div>
+                        <div className="text-sm font-medium text-ink">{fmtDate(s.date)}</div>
+                        {s.notes && <div className="mt-0.5 text-xs text-ink-muted">{s.notes}</div>}
+                      </div>
+                      <SessionBadge status={s.status} />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -457,6 +614,28 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-semibold text-red-600">
       <X className="h-3 w-3" /> Reprocessar
+    </span>
+  )
+}
+
+function SessionBadge({ status }: { status: SessionRecord['status'] }) {
+  if (status === 'realizada') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-se-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-se-teal">
+        <Check className="h-3 w-3" /> Realizada
+      </span>
+    )
+  }
+  if (status === 'faltou') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold text-amber-600">
+        <X className="h-3 w-3" /> Faltou
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-se-sky px-2.5 py-0.5 text-[10px] font-semibold text-se-teal">
+      <Clock className="h-3 w-3" /> Agendada
     </span>
   )
 }

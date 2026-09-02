@@ -100,31 +100,50 @@ export function Payment() {
 
       const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-preference`
 
-      const response = await fetch(edgeFunctionUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${supabaseAnonKey}`,
-          'x-site-url': window.location.origin,
-        },
-        body: JSON.stringify({
-          modalidade: modality,
-          plan,
-          amount,
-          name: values.name.trim(),
-          email,
-          phone: values.phone.trim(),
-          lead_id: leadId,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Erro ao criar o pagamento.')
+      let response: Response
+      try {
+        response = await fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseAnonKey}`,
+            'x-site-url': window.location.origin,
+          },
+          body: JSON.stringify({
+            modalidade: modality,
+            plan,
+            amount,
+            name: values.name.trim(),
+            email,
+            phone: values.phone.trim(),
+            lead_id: leadId,
+          }),
+        })
+      } catch (err) {
+        console.error('Fetch create-preference falhou:', err)
+        throw new Error(
+          'Não foi possível conectar ao servidor de pagamento. Verifique se a função ' +
+          'create-preference está publicada no Supabase e se a URL do projeto está correta na variável VITE_SUPABASE_URL.',
+        )
       }
 
-      const initPoint = result.init_point || result.sandbox_init_point
+      let result: Record<string, unknown>
+      try {
+        result = await response.json()
+      } catch {
+        throw new Error(
+          'Resposta inesperada do servidor (código ' + response.status + '). ' +
+          'Confirme que a Edge Function create-preference foi publicada com: supabase functions deploy create-preference',
+        )
+      }
+
+      if (!response.ok) {
+        const errMsg = typeof result.error === 'string' ? result.error : 'Erro ao criar o pagamento.'
+        throw new Error(errMsg)
+      }
+
+      const initPoint = (typeof result.init_point === 'string' && result.init_point)
+        || (typeof result.sandbox_init_point === 'string' && result.sandbox_init_point)
       if (!initPoint) {
         throw new Error('Não foi possível obter o link de pagamento do Mercado Pago.')
       }

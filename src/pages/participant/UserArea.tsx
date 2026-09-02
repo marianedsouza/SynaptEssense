@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Check, Clock, CreditCard, LogOut, Shield, X, User } from 'lucide-react'
+import { Check, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
 import { useSettings } from '../../context/SettingsContext'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 interface Lead {
   id: string
@@ -90,9 +93,78 @@ export function UserArea() {
     navigate('/')
   }
 
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState<string | null>(null)
+
+  async function handleCreatePayment(plan?: 'mensal' | 'completo') {
+    if (!lastLead) return
+    const targetPlan = plan ?? lastLead.plan
+    setPaying(true)
+    setPayError(null)
+
+    const amount =
+      lastLead.modality === 'social'
+        ? parseFloat(targetPlan === 'mensal' ? settings.payment_social_monthly : settings.payment_social_complete) || 0
+        : parseFloat(targetPlan === 'mensal' ? settings.payment_integral_monthly : settings.payment_integral_complete) || 0
+
+    try {
+      if (!amount || amount <= 0) {
+        throw new Error('Valor do plano não configurado. Informe os valores no painel do analista.')
+      }
+
+      const email = (user?.email ?? '').toLowerCase()
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-preference`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+          'x-site-url': window.location.origin,
+        },
+        body: JSON.stringify({
+          modalidade: lastLead.modality,
+          plan: targetPlan,
+          amount,
+          name: lastLead.name,
+          email,
+          phone: lastLead.phone,
+          lead_id: lastLead.id,
+          user_id: (await supabase.auth.getUser()).data.user?.id ?? null,
+        }),
+      })
+
+      let result: Record<string, unknown>
+      try {
+        result = await response.json()
+      } catch {
+        throw new Error(
+          'Resposta inesperada do servidor (código ' + response.status + '). Confirme que a Edge Function create-preference está publicada.',
+        )
+      }
+
+      if (!response.ok) {
+        const errMsg = typeof result.error === 'string' ? result.error : 'Erro ao criar o pagamento.'
+        throw new Error(errMsg)
+      }
+
+      const initPoint =
+        (typeof result.init_point === 'string' && result.init_point) ||
+        (typeof result.sandbox_init_point === 'string' && result.sandbox_init_point)
+      if (!initPoint) {
+        throw new Error('Não foi possível obter o link de pagamento do Mercado Pago.')
+      }
+
+      window.location.href = initPoint
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : 'Erro ao iniciar o pagamento.')
+      setPaying(false)
+    }
+  }
+
   const lastLead = leads[0]
   const paidPayments = payments.filter((p) => p.status === 'approved')
   const totalPaid = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+  const isPaid = payments.some((p) => p.status === 'approved')
+  const hasPending = payments.some((p) => p.status === 'pending')
 
   const pricePerSession = lastLead
     ? lastLead.modality === 'social'
@@ -188,6 +260,61 @@ export function UserArea() {
             Meu protocolo
           </h1>
         </div>
+
+        {leads.length > 0 && (
+          <div className="card mb-6 border-2 border-se-violet/15 p-6 md:p-8">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-3">
+                {isPaid ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-se-teal/10 px-3 py-1 text-xs font-semibold text-se-teal">
+                    <Check className="h-3.5 w-3.5" /> Pago
+                  </span>
+                ) : hasPending ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
+                    <Clock className="h-3.5 w-3.5" /> Pendente
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-se-lavender px-3 py-1 text-xs font-semibold text-se-violet">
+                    <CreditCard className="h-3.5 w-3.5" /> Aguardando pagamento
+                  </span>
+                )}
+                <div>
+                  <div className="text-sm font-semibold text-ink">
+                    {lastLead.plan === 'mensal' ? 'Plano mensal' : 'Plano completo'} • {MODALITY_LABELS[lastLead.modality]}
+                  </div>
+                  <div className="text-xs text-ink-muted">
+                    {isPaid ? 'Pagamento efetuado' : 'Conclua o pagamento para ativar seu protocolo'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                {!isPaid && (
+                  <button
+                    onClick={() => handleCreatePayment()}
+                    disabled={paying}
+                    className="btn-primary !px-6"
+                  >
+                    {paying ? 'Abrindo pagamento…' : 'Fazer pagamento'}
+                    <CreditCard className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => handleCreatePayment(lastLead.plan)}
+                  disabled={paying}
+                  className="btn-secondary !px-6"
+                  title="Gerar novo pagamento do plano (ex: renovação mensal)"
+                >
+                  {isPaid ? 'Renovar plano' : 'Gerar novo pagamento'}
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+                {payError && (
+                  <p className="text-right text-xs text-red-600">{payError}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {leads.length === 0 ? (
           <div className="card p-8 text-center">

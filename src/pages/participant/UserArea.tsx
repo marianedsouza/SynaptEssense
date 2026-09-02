@@ -161,8 +161,6 @@ export function UserArea() {
   }
 
   const lastLead = leads[0]
-  const paidPayments = payments.filter((p) => p.status === 'approved')
-  const totalPaid = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
   const isPaid = payments.some((p) => p.status === 'approved')
   const hasPending = payments.some((p) => p.status === 'pending')
 
@@ -289,9 +287,18 @@ export function UserArea() {
               </div>
 
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
-                {!isPaid && (
+                {isPaid ? (
                   <button
-                    onClick={() => handleCreatePayment()}
+                    onClick={() => handleCreatePayment(lastLead.plan)}
+                    disabled={paying}
+                    className="btn-primary !px-6"
+                  >
+                    {paying ? 'Abrindo pagamento…' : 'Renovar assinatura'}
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleCreatePayment(lastLead.plan)}
                     disabled={paying}
                     className="btn-primary !px-6"
                   >
@@ -299,15 +306,6 @@ export function UserArea() {
                     <CreditCard className="h-4 w-4" />
                   </button>
                 )}
-                <button
-                  onClick={() => handleCreatePayment(lastLead.plan)}
-                  disabled={paying}
-                  className="btn-secondary !px-6"
-                  title="Gerar novo pagamento do plano (ex: renovação mensal)"
-                >
-                  {isPaid ? 'Renovar plano' : 'Gerar novo pagamento'}
-                  <RefreshCw className="h-4 w-4" />
-                </button>
                 {payError && (
                   <p className="text-right text-xs text-red-600">{payError}</p>
                 )}
@@ -388,15 +386,9 @@ export function UserArea() {
 
             {/* Payments / amounts paid */}
             <div className="card mt-6 p-6 md:p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-se-violet" />
-                  <h2 className="font-display text-lg font-semibold text-ink">Valores pagos</h2>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-ink-muted">Total pago</div>
-                  <div className="font-display text-xl font-semibold text-se-teal">{fmtCurrency(totalPaid)}</div>
-                </div>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-se-violet" />
+                <h2 className="font-display text-lg font-semibold text-ink">Valores pagos</h2>
               </div>
 
               {payments.length === 0 ? (

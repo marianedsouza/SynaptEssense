@@ -6,7 +6,9 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  Pencil,
   Phone,
+  Save,
   Trash2,
 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
@@ -52,6 +54,15 @@ export function LeadDetail() {
 
   const [newDate, setNewDate] = useState('')
   const [newNotes, setNewNotes] = useState('')
+
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editModality, setEditModality] = useState<'social' | 'integral'>('social')
+  const [editPlan, setEditPlan] = useState<'mensal' | 'completo'>('completo')
+  const [editError, setEditError] = useState<string | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -126,6 +137,56 @@ export function LeadDetail() {
     setSessions(await fetchSessionsByLead(lead.id))
   }
 
+  function startEdit() {
+    if (!lead) return
+    setEditName(lead.name)
+    setEditPhone(lead.phone || '')
+    setEditEmail(lead.email || '')
+    setEditModality(lead.modality)
+    setEditPlan(lead.plan || 'completo')
+    setEditError(null)
+    setEditing(true)
+  }
+
+  async function handleSaveEdit() {
+    if (!lead) return
+    if (!editName.trim()) {
+      setEditError('O nome é obrigatório.')
+      return
+    }
+    setSavingEdit(true)
+    setEditError(null)
+    const { error } = await supabase
+      .from('protocol_leads')
+      .update({
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        email: editEmail.trim(),
+        modality: editModality,
+        plan: editPlan,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', lead.id)
+    setSavingEdit(false)
+    if (error) {
+      setEditError(error.message)
+      return
+    }
+    setEditing(false)
+    setLead((prev) =>
+      prev
+        ? {
+            ...prev,
+            name: editName.trim(),
+            phone: editPhone.trim(),
+            email: editEmail.trim(),
+            modality: editModality,
+            plan: editPlan,
+          }
+        : prev,
+    )
+  }
+
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -147,6 +208,13 @@ export function LeadDetail() {
               <Clock className="h-3.5 w-3.5" /> {lastPayment ? 'Pendente' : 'Sem pagamento'}
             </span>
           )}
+          <button
+            onClick={() => (editing ? setEditing(false) : startEdit())}
+            className="inline-flex items-center gap-1.5 rounded-full border border-se-violet/20 px-3 py-1 text-xs font-medium text-se-violet transition hover:bg-se-lavender"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {editing ? 'Cancelar' : 'Editar dados'}
+          </button>
         </div>
         <p className="mt-1 text-sm text-ink-muted">
           Interesse registrado em {fmtDateTime(lead.created_at)}
@@ -184,6 +252,51 @@ export function LeadDetail() {
           </div>
         </div>
       </div>
+
+      {editing && (
+        <div className="card mt-6 p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <Pencil className="h-5 w-5 text-se-violet" />
+            <h2 className="font-display text-lg font-semibold text-ink">Editar dados do interessado</h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="label">Nome</label>
+              <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Telefone / WhatsApp</label>
+              <input className="input" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">E-mail</label>
+              <input className="input" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Modalidade</label>
+              <select className="input" value={editModality} onChange={(e) => setEditModality(e.target.value as 'social' | 'integral')}>
+                <option value="social">Modalidade Social</option>
+                <option value="integral">Protocolo Integral de Reconstrução</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Plano</label>
+              <select className="input" value={editPlan} onChange={(e) => setEditPlan(e.target.value as 'mensal' | 'completo')}>
+                <option value="mensal">Plano mensal</option>
+                <option value="completo">Plano completo</option>
+              </select>
+            </div>
+          </div>
+          {editError && <p className="mt-3 text-xs text-red-600">{editError}</p>}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={handleSaveEdit} disabled={savingEdit} className="btn-primary">
+              <Save className="h-4 w-4" />
+              {savingEdit ? 'Salvando…' : 'Salvar alterações'}
+            </button>
+            <button onClick={() => setEditing(false)} className="btn-secondary">Cancelar</button>
+          </div>
+        </div>
+      )}
 
       {/* Agenda */}
       <div className="card mt-6 overflow-hidden">

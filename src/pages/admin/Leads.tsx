@@ -36,16 +36,21 @@ function monthKey(iso: string) {
   return iso.slice(0, 7)
 }
 
+function yearKey(iso: string) {
+  return iso.slice(0, 4)
+}
+
 function monthLabel(key: string) {
   const [year, month] = key.split('-').map(Number)
   const date = new Date(year, month - 1, 1)
-  const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const label = date.toLocaleDateString('pt-BR', { month: 'long' })
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
 export function Leads() {
   const [leads, setLeads] = useState<LeadWithPayment[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
 
   const load = useCallback(async () => {
@@ -116,13 +121,30 @@ export function Leads() {
     )
   }
 
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const currentYear = new Date().getFullYear().toString()
+
+  const availableYears = Array.from(new Set(leads.map((l) => yearKey(l.created_at))))
+    .sort()
+    .reverse()
   const availableMonths = Array.from(new Set(leads.map((l) => monthKey(l.created_at))))
     .sort()
     .reverse()
-  const currentMonth = new Date().toISOString().slice(0, 7)
-  const activeMonth = availableMonths.includes(selectedMonth) ? selectedMonth : currentMonth
 
-  const filteredLeads = activeMonth === 'todos' ? leads : leads.filter((l) => monthKey(l.created_at) === activeMonth)
+  const activeYear = availableYears.includes(selectedYear) ? selectedYear : currentYear
+  const yearMonths =
+    activeYear === 'todos'
+      ? availableMonths
+      : availableMonths.filter((m) => m.startsWith(activeYear))
+  const activeMonth = yearMonths.includes(selectedMonth) ? selectedMonth : currentMonth
+
+  let filteredLeads = leads
+  if (activeYear !== 'todos') {
+    filteredLeads = filteredLeads.filter((l) => yearKey(l.created_at) === activeYear)
+  }
+  if (activeMonth !== 'todos') {
+    filteredLeads = filteredLeads.filter((l) => monthKey(l.created_at) === activeMonth)
+  }
   const filteredPaid = filteredLeads.filter((l) => l.payment?.status === 'approved')
   const filteredRevenue = filteredPaid.reduce((sum, l) => sum + (l.payment?.amount ?? 0), 0)
 
@@ -178,23 +200,49 @@ export function Leads() {
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-se-violet" />
             <h2 className="font-display text-lg font-semibold text-ink">
-              {activeMonth === 'todos' ? 'Todos os interesses' : `Interesses de ${monthLabel(activeMonth)}`}
+              {activeYear === 'todos' && activeMonth === 'todos'
+                ? 'Todos os interesses'
+                : activeMonth === 'todos'
+                  ? `Interesses de ${activeYear}`
+                  : `Interesses de ${monthLabel(activeMonth)} ${yearKey(activeMonth)}`}
             </h2>
             <span className="rounded-full bg-se-lavender px-2.5 py-0.5 text-xs font-medium text-se-violet">
               {filteredLeads.length}
             </span>
           </div>
-          <select
-            value={activeMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink focus:border-se-violet focus:outline-none"
-          >
-            <option value={monthKey(new Date().toISOString())}>Mês atual ({monthLabel(monthKey(new Date().toISOString()))})</option>
-            {availableMonths.map((m) => (
-              <option key={m} value={m}>{monthLabel(m)}</option>
-            ))}
-            <option value="todos">Todos os meses</option>
-          </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={activeYear}
+              onChange={(e) => {
+                setSelectedYear(e.target.value)
+                if (e.target.value !== 'todos') {
+                  const months = availableMonths
+                    .filter((m) => m.startsWith(e.target.value))
+                  setSelectedMonth(months.includes(currentMonth) ? currentMonth : (months[0] ?? 'todos'))
+                } else {
+                  setSelectedMonth('todos')
+                }
+              }}
+              className="rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink focus:border-se-violet focus:outline-none"
+            >
+              <option value={currentYear}>Ano atual ({currentYear})</option>
+              {availableYears.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+              <option value="todos">Todos os anos</option>
+            </select>
+            <select
+              value={activeMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink focus:border-se-violet focus:outline-none"
+            >
+              <option value={currentMonth}>Mês atual ({monthLabel(currentMonth)})</option>
+              {yearMonths.map((m) => (
+                <option key={m} value={m}>{monthLabel(m)}</option>
+              ))}
+              <option value="todos">Todos os meses</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (

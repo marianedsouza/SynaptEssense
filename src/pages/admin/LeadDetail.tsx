@@ -246,13 +246,29 @@ export function LeadDetail() {
                       </select>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => handleDelete(s.id)}
-                        className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
-                        title="Excluir atendimento"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        {s.status === 'realizada' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-se-teal/10 px-3 py-1 text-[11px] font-semibold text-se-teal">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Concluída
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleStatus(s.id, 'realizada')}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-se-teal px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-se-teal/90"
+                            title="Marcar este atendimento como concluído"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Concluir
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(s.id)}
+                          className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
+                          title="Excluir atendimento"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

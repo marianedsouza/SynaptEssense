@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ImagePlus, Save } from 'lucide-react'
+import { ImagePlus, Save, CreditCard } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { fetchSettings, saveSetting } from '../../lib/settings'
 import { supabase } from '../../lib/supabase'
@@ -21,6 +21,11 @@ const FIELDS_GENERAL: { key: string; label: string; textarea?: boolean }[] = [
   { key: 'closing_message', label: 'Mensagem de encerramento' },
   { key: 'institutional_text', label: 'Texto institucional da metodologia', textarea: true },
   { key: 'privacy_email', label: 'E-mail para solicitação de exclusão (LGPD)' },
+]
+
+const FIELDS_PAYMENT: { key: string; label: string; description: string }[] = [
+  { key: 'payment_social_price', label: 'Preço - Modalidade Social (R$)', description: 'Valor cobrado ao selecionar a Modalidade Social.' },
+  { key: 'payment_integral_price', label: 'Preço - Protocolo Integral (R$)', description: 'Valor cobrado ao selecionar o Protocolo Integral de Reconstrução.' },
 ]
 
 export function Settings() {
@@ -57,6 +62,9 @@ export function Settings() {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
     for (const field of FIELDS_GENERAL) {
+      results.push(await saveSetting(field.key, values[field.key] ?? ''))
+    }
+    for (const field of FIELDS_PAYMENT) {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
     results.push(await saveSetting('analyst_photo', photoUrl))
@@ -348,6 +356,46 @@ export function Settings() {
         <p className="mt-8 text-center text-xs uppercase tracking-[0.2em] text-ink-muted">
           Toda transformação começa quando novas conexões são criadas.
         </p>
+      </div>
+
+      {/* Configurações de pagamento */}
+      <div className="card mt-6 p-5 md:p-8">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-se-violet" />
+          <h2 className="font-display text-xl font-semibold text-ink">
+            Pagamento
+          </h2>
+        </div>
+        <p className="mt-1 text-sm text-ink-muted">
+          Valores cobrados ao participante ao selecionar uma modalidade de acompanhamento.
+          O pagamento é processado via Mercado Pago (cartão de crédito).
+        </p>
+
+        <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          {FIELDS_PAYMENT.map((field) => (
+            <div key={field.key}>
+              <label className="label" htmlFor={`setting-${field.key}`}>
+                {field.label}
+              </label>
+              <input
+                id={`setting-${field.key}`}
+                type="number"
+                step="0.01"
+                min="0"
+                className="input"
+                value={values[field.key] ?? ''}
+                onChange={(e) => set(field.key, e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="mt-1 text-xs text-ink-muted">{field.description}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-se-lavender bg-se-lavender/30 px-4 py-3 text-xs text-ink-soft">
+          <strong className="text-ink">Nota:</strong> O valor de teste padrão é R$ 3,00. Para produção, altere para o valor desejado.
+          A public key do Mercado Pago é configurada na variável de ambiente <code className="rounded bg-ink/5 px-1">VITE_MERCADOPAGO_PUBLIC_KEY</code>.
+        </div>
       </div>
     </AdminLayout>
   )

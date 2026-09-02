@@ -11,6 +11,7 @@ import { Identification } from './pages/participant/Identification'
 import { Questionnaire } from './pages/participant/Questionnaire'
 import { Completion } from './pages/participant/Completion'
 import { Thanks } from './pages/participant/Thanks'
+import { Payment } from './pages/participant/Payment'
 
 const AdminLogin = lazy(() =>
   import('./pages/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })),
@@ -71,6 +72,7 @@ function App() {
             <Route path="/levantamento" element={<Questionnaire />} />
             <Route path="/concluido" element={<Completion />} />
             <Route path="/obrigado" element={<Thanks />} />
+            <Route path="/pagamento" element={<Payment />} />
 
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />

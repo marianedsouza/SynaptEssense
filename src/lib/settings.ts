@@ -13,6 +13,8 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   institutional_text:
     'A SynaptEssence360® foi concebida para organizar diferentes dimensões da experiência humana em uma leitura estratégica de desenvolvimento.',
   privacy_email: 'contato@synaptessence.com.br',
+  payment_social_price: '3.00',
+  payment_integral_price: '3.00',
 }
 
 export function getDefaultAnalystProfile(): AnalystProfile {

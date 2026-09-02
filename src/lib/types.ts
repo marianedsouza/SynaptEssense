@@ -95,3 +95,29 @@ export interface AnalystProfile {
   photoUrl: string
   bio: string
 }
+
+export interface ProtocolLead {
+  id: string
+  name: string
+  phone: string
+  modality: 'social' | 'integral'
+  created_at: string
+}
+
+export interface Payment {
+  id: string
+  lead_id: string
+  modality: 'social' | 'integral'
+  amount: number
+  currency: string
+  status: 'pending' | 'approved' | 'rejected' | 'error'
+  mp_payment_id: string | null
+  mp_preference_id: string | null
+  payer_name: string | null
+  payer_email: string | null
+  payer_phone: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type ModalityType = 'social' | 'integral'

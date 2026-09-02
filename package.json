@@ -12,6 +12,7 @@
     "seed": "node scripts/generate-seed.mjs"
   },
   "dependencies": {
+    "@mercadopago/sdk-react": "^1.0.7",
     "@supabase/supabase-js": "^2.112.3",
     "exceljs": "^4.4.0",
     "jspdf": "^4.2.1",

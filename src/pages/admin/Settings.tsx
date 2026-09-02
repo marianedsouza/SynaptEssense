@@ -23,9 +23,16 @@ const FIELDS_GENERAL: { key: string; label: string; textarea?: boolean }[] = [
   { key: 'privacy_email', label: 'E-mail para solicitação de exclusão (LGPD)' },
 ]
 
-const FIELDS_PAYMENT: { key: string; label: string; description: string }[] = [
-  { key: 'payment_social_price', label: 'Preço - Modalidade Social (R$)', description: 'Valor cobrado ao selecionar a Modalidade Social.' },
-  { key: 'payment_integral_price', label: 'Preço - Protocolo Integral (R$)', description: 'Valor cobrado ao selecionar o Protocolo Integral de Reconstrução.' },
+const FIELDS_PAYMENT_SOCIAL: { key: string; label: string; description: string }[] = [
+  { key: 'payment_social_value_per_session', label: 'Valor por encontro (R$)', description: 'Valor cobrado por cada encontro individual.' },
+  { key: 'payment_social_monthly', label: 'Plano mensal (R$)', description: 'Valor do plano mensal do protocolo.' },
+  { key: 'payment_social_complete', label: 'Plano completo (R$)', description: 'Valor total do protocolo completo (12 encontros / 90 dias).' },
+]
+
+const FIELDS_PAYMENT_INTEGRAL: { key: string; label: string; description: string }[] = [
+  { key: 'payment_integral_value_per_session', label: 'Valor por encontro (R$)', description: 'Valor cobrado por cada encontro individual.' },
+  { key: 'payment_integral_monthly', label: 'Plano mensal (R$)', description: 'Valor do plano mensal do protocolo.' },
+  { key: 'payment_integral_complete', label: 'Plano completo (R$)', description: 'Valor total do protocolo completo (12 encontros / 90 dias).' },
 ]
 
 export function Settings() {
@@ -64,7 +71,10 @@ export function Settings() {
     for (const field of FIELDS_GENERAL) {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
-    for (const field of FIELDS_PAYMENT) {
+    for (const field of FIELDS_PAYMENT_SOCIAL) {
+      results.push(await saveSetting(field.key, values[field.key] ?? ''))
+    }
+    for (const field of FIELDS_PAYMENT_INTEGRAL) {
       results.push(await saveSetting(field.key, values[field.key] ?? ''))
     }
     results.push(await saveSetting('analyst_photo', photoUrl))
@@ -367,33 +377,69 @@ export function Settings() {
           </h2>
         </div>
         <p className="mt-1 text-sm text-ink-muted">
-          Valores cobrados ao participante ao selecionar uma modalidade de acompanhamento.
-          O pagamento é processado via Mercado Pago (cartão de crédito).
+          Valores cobrados ao participante segundo as regras do protocolo escolhido.
+          O pagamento é processado via Mercado Pago.
         </p>
 
-        <div className="mt-6 grid gap-5 sm:grid-cols-2">
-          {FIELDS_PAYMENT.map((field) => (
-            <div key={field.key}>
-              <label className="label" htmlFor={`setting-${field.key}`}>
-                {field.label}
-              </label>
-              <input
-                id={`setting-${field.key}`}
-                type="number"
-                step="0.01"
-                min="0"
-                className="input"
-                value={values[field.key] ?? ''}
-                onChange={(e) => set(field.key, e.target.value)}
-                placeholder="0.00"
-              />
-              <p className="mt-1 text-xs text-ink-muted">{field.description}</p>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border border-ink/5 p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full bg-se-teal" />
+              <h3 className="font-display text-lg font-semibold text-ink">Modalidade Social</h3>
             </div>
-          ))}
+            <div className="space-y-4">
+              {FIELDS_PAYMENT_SOCIAL.map((field) => (
+                <div key={field.key}>
+                  <label className="label" htmlFor={`setting-${field.key}`}>
+                    {field.label}
+                  </label>
+                  <input
+                    id={`setting-${field.key}`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="input"
+                    value={values[field.key] ?? ''}
+                    onChange={(e) => set(field.key, e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <p className="mt-1 text-xs text-ink-muted">{field.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-ink/5 p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-2.5 w-2.5 rounded-full bg-se-violet" />
+              <h3 className="font-display text-lg font-semibold text-ink">Protocolo Integral</h3>
+            </div>
+            <div className="space-y-4">
+              {FIELDS_PAYMENT_INTEGRAL.map((field) => (
+                <div key={field.key}>
+                  <label className="label" htmlFor={`setting-${field.key}`}>
+                    {field.label}
+                  </label>
+                  <input
+                    id={`setting-${field.key}`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="input"
+                    value={values[field.key] ?? ''}
+                    onChange={(e) => set(field.key, e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <p className="mt-1 text-xs text-ink-muted">{field.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 rounded-xl border border-se-lavender bg-se-lavender/30 px-4 py-3 text-xs text-ink-soft">
-          <strong className="text-ink">Nota:</strong> O valor de teste padrão é R$ 3,00. Para produção, altere para o valor desejado.
+          <strong className="text-ink">Nota:</strong> O participante escolhe o plano (mensal ou completo)
+          e paga o valor total de uma vez via Mercado Pago.
           A public key do Mercado Pago é configurada na variável de ambiente <code className="rounded bg-ink/5 px-1">VITE_MERCADOPAGO_PUBLIC_KEY</code>.
         </div>
       </div>

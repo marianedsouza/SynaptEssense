@@ -1,20 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, CreditCard, Shield, Lock } from 'lucide-react'
+import { ArrowLeft, CreditCard, Shield, Lock, QrCode, Landmark } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
-import { initMercadoPago, Payment as PaymentBrick } from '@mercadopago/sdk-react'
+import { useSettings } from '../../context/SettingsContext'
 
-const mpPublicKey = import.meta.env.VITE_MERCADOPAGO_PUBLIC_KEY as string
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
-if (mpPublicKey) {
-  initMercadoPago(mpPublicKey, { locale: 'pt-BR' })
-}
-
 type ModalityType = 'social' | 'integral'
+type PlanType = 'mensal' | 'completo'
 
 const MODALITY_LABELS: Record<ModalityType, string> = {
   social: 'Modalidade Social',
@@ -24,115 +20,123 @@ const MODALITY_LABELS: Record<ModalityType, string> = {
 export function Payment() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { settings } = useSettings()
 
   const modality = (searchParams.get('modalidade') as ModalityType) || 'social'
-  const amountParam = searchParams.get('valor')
+  const plan = (searchParams.get('plano') as PlanType) || 'completo'
 
   const [values, setValues] = useState({
     name: '',
     email: '',
     phone: '',
+    password: '',
   })
-  const [step, setStep] = useState<'form' | 'payment' | 'processing' | 'success' | 'error'>('form')
+  const [step, setStep] = useState<'form' | 'processing' | 'error'>('form')
   const [errorMessage, setErrorMessage] = useState('')
-  const [paymentStatus, setPaymentStatus] = useState('')
-  const brickKey = useRef(0)
 
-  const amount = useMemo(() => {
-    if (amountParam) {
-      const parsed = parseFloat(amountParam)
-      if (!isNaN(parsed) && parsed > 0) return parsed
+  const amount = (() => {
+    if (modality === 'social') {
+      return (parseFloat(plan === 'mensal' ? settings.payment_social_monthly : settings.payment_social_complete) || 0)
     }
-    return 3.0
-  }, [amountParam])
+    return (parseFloat(plan === 'mensal' ? settings.payment_integral_monthly : settings.payment_integral_complete) || 0)
+  })()
 
-  const isFormValid = values.name.trim() && values.email.trim() && values.phone.trim()
-
-  useEffect(() => {
-    if (!mpPublicKey) {
-      setErrorMessage('Chave pública do Mercado Pago não configurada.')
-      setStep('error')
-    }
-  }, [])
+  const isFormValid = values.name.trim() &&
+    values.email.trim() &&
+    values.phone.trim() &&
+    values.password.length >= 6
 
   function handleInputChange(field: string, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }))
   }
 
-  function goToPayment() {
+  async function handleGoToPayment() {
     if (!isFormValid) return
-    brickKey.current += 1
-    setStep('payment')
-  }
 
-  async function handlePaymentSubmit(paymentData: any) {
     setStep('processing')
+    setErrorMessage('')
 
     try {
-      const formData = paymentData.formData as Record<string, unknown>
+      // 1. Create / authenticate the user's account
+      const email = values.email.trim().toLowerCase()
+      let userId: string | null = null
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: values.password,
+        options: {
+          data: { name: values.name.trim(), phone: values.phone.trim() },
+        },
+      })
+      if (signUpError) {
+        throw new Error(`Não foi possível criar o acesso: ${signUpError.message}`)
+      }
+      userId = signUpData.user?.id ?? null
 
-      // Create lead first
+      // 2. Create lead (protocol interest) bound to user + plan
       let leadId: string | null = null
       try {
-        const { data: leadData, error: leadError } = await supabase
+        const { data: leadData } = await supabase
           .from('protocol_leads')
           .insert({
             name: values.name.trim(),
             phone: values.phone.trim(),
+            email,
+            plan,
+            user_id: userId,
             modality,
             created_at: new Date().toISOString(),
           })
           .select('id')
           .single()
-
-        if (!leadError && leadData) {
-          leadId = leadData.id
-        }
+        if (leadData) leadId = leadData.id
       } catch {
         // continue even if lead save fails
       }
 
-      // Process payment via Edge Function
-      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/process-payment`
+      // 3. Create MercadoPago Checkout Pro preference
+      if (!amount || amount <= 0) {
+        throw new Error('Valor do plano não configurado. Informe os valores no painel do analista.')
+      }
+
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-preference`
 
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${supabaseAnonKey}`,
+          'x-site-url': window.location.origin,
         },
         body: JSON.stringify({
-          token: formData.token,
-          issuer_id: formData.issuer_id,
-          payment_method_id: formData.payment_method_id,
-          transaction_amount: formData.transaction_amount,
-          installments: formData.installments,
-          payer_email: (formData.payer as Record<string, unknown>)?.email || values.email,
-          payer_name: values.name.trim(),
-          payer_phone: values.phone.trim(),
+          modalidade: modality,
+          plan,
+          amount,
+          name: values.name.trim(),
+          email,
+          phone: values.phone.trim(),
           lead_id: leadId,
-          modality,
         }),
       })
 
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao processar pagamento.')
+        throw new Error(result.error || 'Erro ao criar o pagamento.')
       }
 
-      setPaymentStatus(result.status)
-      setStep('success')
+      const initPoint = result.init_point || result.sandbox_init_point
+      if (!initPoint) {
+        throw new Error('Não foi possível obter o link de pagamento do Mercado Pago.')
+      }
+
+      window.location.href = initPoint
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Erro ao processar pagamento.')
+      setErrorMessage(err instanceof Error ? err.message : 'Erro ao iniciar o pagamento.')
       setStep('error')
     }
   }
 
-  function handlePaymentError() {
-    setErrorMessage('Ocorreu um erro ao inicializar o formulário de pagamento.')
-    setStep('error')
-  }
+  const planLabel = plan === 'mensal' ? 'Plano mensal' : 'Plano completo'
 
   return (
     <div className="relative min-h-screen bg-se-mist">
@@ -163,18 +167,18 @@ export function Payment() {
                 {MODALITY_LABELS[modality]}
               </h1>
               <p className="mt-3 text-sm text-ink-soft">
-                Preencha seus dados para prosseguir com o pagamento.
+                Complete seus dados e crie seu acesso para acompanhar seu protocolo.
               </p>
             </div>
 
             {/* Amount Card */}
             <div className="card mb-6 p-6 text-center">
-              <div className="text-sm text-ink-muted">Valor a pagar</div>
+              <div className="text-sm text-ink-muted">Valor a pagar • {planLabel}</div>
               <div className="mt-1 font-display text-4xl font-semibold text-ink">
                 R$ {amount.toFixed(2).replace('.', ',')}
               </div>
               <p className="mt-2 text-xs text-ink-muted">
-                Valor de teste • Parcelamento em até 10x com juros da operadora.
+                Pagamento único do {planLabel.toLowerCase()} via Mercado Pago.
               </p>
             </div>
 
@@ -182,7 +186,7 @@ export function Payment() {
             <div className="card p-6 md:p-8">
               <div className="flex items-center gap-2 mb-6">
                 <CreditCard className="h-5 w-5 text-se-violet" />
-                <h2 className="font-display text-lg font-semibold text-ink">Seus dados</h2>
+                <h2 className="font-display text-lg font-semibold text-ink">Seus dados e acesso</h2>
               </div>
 
               <div className="space-y-4">
@@ -222,74 +226,53 @@ export function Payment() {
                     autoComplete="tel"
                   />
                 </div>
+                <div>
+                  <label className="label" htmlFor="pay-password">Senha de acesso</label>
+                  <input
+                    id="pay-password"
+                    type="password"
+                    className="input"
+                    value={values.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Mínimo de 6 caracteres"
+                    autoComplete="new-password"
+                  />
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Você usará esta senha para acessar sua área pessoal e acompanhar seu protocolo.
+                  </p>
+                </div>
               </div>
 
               <button
-                onClick={goToPayment}
+                onClick={handleGoToPayment}
                 disabled={!isFormValid}
                 className="btn-primary mt-6 w-full disabled:opacity-40 disabled:pointer-events-none"
               >
-                Continuar para pagamento
+                Ir para o pagamento
                 <Lock className="h-4 w-4" />
               </button>
 
+              {/* Payment methods hint */}
+              <div className="mt-5 grid grid-cols-3 gap-3">
+                <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/5 bg-se-mist/60 px-2 py-3 text-center">
+                  <CreditCard className="h-4 w-4 text-se-violet" />
+                  <span className="text-[10px] font-medium text-ink-muted">Cartão</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/5 bg-se-mist/60 px-2 py-3 text-center">
+                  <QrCode className="h-4 w-4 text-se-violet" />
+                  <span className="text-[10px] font-medium text-ink-muted">PIX</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/5 bg-se-mist/60 px-2 py-3 text-center">
+                  <Landmark className="h-4 w-4 text-se-violet" />
+                  <span className="text-[10px] font-medium text-ink-muted">Boleto</span>
+                </div>
+              </div>
+
               <div className="mt-4 flex items-center justify-center gap-2 text-[11px] text-ink-muted">
                 <Shield className="h-3.5 w-3.5" />
-                Pagamento processado com segurança pelo Mercado Pago.
+                Você será redirecionado para o pagamento seguro do Mercado Pago.
               </div>
             </div>
-          </>
-        )}
-
-        {step === 'payment' && (
-          <>
-            <div className="text-center mb-6">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-se-violet">
-                Dados do cartão
-              </div>
-              <h1 className="mt-2 font-display text-2xl font-semibold text-ink">
-                Informe os dados do seu cartão
-              </h1>
-              <p className="mt-2 text-sm text-ink-soft">
-                Valor: <strong className="text-ink">R$ {amount.toFixed(2).replace('.', ',')}</strong> •{' '}
-                {MODALITY_LABELS[modality]}
-              </p>
-            </div>
-
-            <div className="card p-6 md:p-8">
-              <PaymentBrick
-                key={brickKey.current}
-                initialization={{
-                  amount,
-                  payer: {
-                    email: values.email,
-                  },
-                }}
-                customization={{
-                  paymentMethods: {
-                    creditCard: 'all',
-                    debitCard: 'all',
-                    maxInstallments: 1,
-                  },
-                  visual: {
-                    style: {
-                      theme: 'default',
-                    },
-                  },
-                }}
-                onSubmit={handlePaymentSubmit}
-                onReady={() => {}}
-                onError={handlePaymentError}
-                locale="pt-BR"
-              />
-            </div>
-
-            <button
-              onClick={() => setStep('form')}
-              className="mt-4 w-full text-center text-xs text-ink-muted hover:text-ink"
-            >
-              ← Voltar e alterar dados
-            </button>
           </>
         )}
 
@@ -299,38 +282,11 @@ export function Payment() {
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-se-violet border-t-transparent" />
             </div>
             <h2 className="mt-6 font-display text-xl font-semibold text-ink">
-              Processando pagamento...
+              Redirecionando para o pagamento...
             </h2>
             <p className="mt-2 text-sm text-ink-soft">
-              Aguarde enquanto validamos seu pagamento.
+              Aguarde enquanto preparamos seu checkout seguro no Mercado Pago.
             </p>
-          </div>
-        )}
-
-        {step === 'success' && (
-          <div className="card p-8 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-se-teal/10">
-              <Check className="h-8 w-8 text-se-teal" />
-            </div>
-            <h2 className="mt-6 font-display text-xl font-semibold text-ink">
-              Pagamento realizado com sucesso!
-            </h2>
-            <p className="mt-2 text-sm text-ink-soft">
-              Seu pagamento foi aprovado. Em breve entraremos em contato pelo número informado para alinhar os próximos passos do seu{' '}
-              <strong className="text-ink">{MODALITY_LABELS[modality]}</strong>.
-            </p>
-            <p className="mt-4 text-xs text-ink-muted">
-              Status: <strong className="text-se-teal capitalize">{paymentStatus}</strong>
-            </p>
-            <p className="mt-1 font-display text-sm italic text-se-violet">
-              Toda transformação começa quando novas conexões são criadas.
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="btn-primary mt-6"
-            >
-              Voltar ao início
-            </button>
           </div>
         )}
 
@@ -343,7 +299,7 @@ export function Payment() {
               Houve um problema
             </h2>
             <p className="mt-2 text-sm text-ink-soft">
-              {errorMessage || 'Não foi possível processar seu pagamento. Tente novamente.'}
+              {errorMessage || 'Não foi possível iniciar o pagamento. Tente novamente.'}
             </p>
             <div className="mt-6 flex gap-3">
               <button

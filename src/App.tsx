@@ -1,7 +1,8 @@
-import { Suspense, lazy } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
+import { supabase } from './lib/supabase'
 import { Landing } from './pages/participant/Landing'
 import { Protocol } from './pages/participant/Protocol'
 import { Reception } from './pages/participant/Reception'
@@ -12,6 +13,10 @@ import { Questionnaire } from './pages/participant/Questionnaire'
 import { Completion } from './pages/participant/Completion'
 import { Thanks } from './pages/participant/Thanks'
 import { Payment } from './pages/participant/Payment'
+import { UserArea } from './pages/participant/UserArea'
+import { UserAreaLogin } from './pages/participant/UserAreaLogin'
+import { UserAreaRecover } from './pages/participant/UserAreaRecover'
+import { UserAreaReset } from './pages/participant/UserAreaReset'
 
 const AdminLogin = lazy(() =>
   import('./pages/admin/AdminLogin').then((m) => ({ default: m.AdminLogin })),
@@ -57,6 +62,31 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <ProtectedRoute>{children}</ProtectedRoute>
 }
 
+function UserAreaRoute({ children }: { children: React.ReactNode }) {
+  const [checking, setChecking] = useState(true)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) {
+        navigate('/minha-area/login', { replace: true })
+        return
+      }
+      setChecking(false)
+    })
+  }, [navigate])
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-se-mist">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-se-violet border-t-transparent" />
+      </div>
+    )
+  }
+
+  return <>{children}</>
+}
+
 function App() {
   return (
     <SettingsProvider>
@@ -73,6 +103,10 @@ function App() {
             <Route path="/concluido" element={<Completion />} />
             <Route path="/obrigado" element={<Thanks />} />
             <Route path="/pagamento" element={<Payment />} />
+            <Route path="/minha-area/login" element={<UserAreaLogin />} />
+            <Route path="/minha-area/recuperar-senha" element={<UserAreaRecover />} />
+            <Route path="/minha-area/redefinir-senha" element={<UserAreaReset />} />
+            <Route path="/minha-area" element={<UserAreaRoute><UserArea /></UserAreaRoute>} />
 
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<AdminRoute><Dashboard /></AdminRoute>} />

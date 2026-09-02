@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, ChevronDown } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, ChevronDown, User } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { useSettings } from '../../context/SettingsContext'
@@ -78,6 +78,12 @@ const BODIES = [
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
+function fmtPrice(value?: string) {
+  const n = parseFloat(value || '0')
+  if (isNaN(n) || n <= 0) return '0,00'
+  return n.toFixed(2).replace('.', ',')
+}
+
 export function Protocol() {
   const navigate = useNavigate()
   const { settings } = useSettings()
@@ -90,11 +96,8 @@ export function Protocol() {
   const [highlightedCard, setHighlightedCard] = useState<'social' | 'integral' | null>(null)
   const modalitiesRef = useRef<HTMLDivElement>(null)
 
-  function goToPayment(modality: 'social' | 'integral') {
-    const price = modality === 'integral'
-      ? (parseFloat(settings.payment_integral_price) || 3.00)
-      : (parseFloat(settings.payment_social_price) || 3.00)
-    navigate(`/pagamento?modalidade=${modality}&valor=${price}`)
+  function goToPayment(modality: 'social' | 'integral', plano: 'mensal' | 'completo') {
+    navigate(`/pagamento?modalidade=${modality}&plano=${plano}`)
   }
 
   function calculateRecommendation() {
@@ -161,13 +164,22 @@ export function Protocol() {
         <button onClick={() => navigate('/')} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Voltar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/minha-area')}
+            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+          >
+            <User className="h-3.5 w-3.5" />
+            Minha área
+          </button>
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Voltar
+          </button>
+        </div>
       </header>
 
       {/* ─── HERO ─── */}
@@ -354,16 +366,23 @@ export function Protocol() {
               </div>
               <div className="mt-8 border-t border-ink/5 pt-6">
                 <div className="text-sm text-ink-muted">Valor por encontro</div>
-                <div className="font-display text-2xl font-semibold text-ink">R$150</div>
+                <div className="font-display text-2xl font-semibold text-ink">
+                  R${fmtPrice(settings.payment_social_value_per_session)}
+                </div>
                 <div className="mt-2 space-y-1 text-sm text-ink-soft">
-                  <p>Plano mensal: <strong className="text-ink">R$600</strong></p>
-                  <p>Plano completo: <strong className="text-ink">R$1.800</strong></p>
-                  <p className="text-xs text-ink-muted">Parcelamento em até 10x com juros da operadora.</p>
+                  <p>Plano mensal: <strong className="text-ink">R${fmtPrice(settings.payment_social_monthly)}</strong></p>
+                  <p>Plano completo: <strong className="text-ink">R${fmtPrice(settings.payment_social_complete)}</strong></p>
+                  <p className="text-xs text-ink-muted">Parcelamento via Mercado Pago.</p>
                 </div>
               </div>
-              <button onClick={() => goToPayment('social')} className="btn-secondary mt-6 w-full">
-                Quero iniciar nesta modalidade
-              </button>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button onClick={() => goToPayment('social', 'mensal')} className="btn-secondary w-full">
+                  Plano mensal
+                </button>
+                <button onClick={() => goToPayment('social', 'completo')} className="btn-primary w-full">
+                  Plano completo
+                </button>
+              </div>
             </div>
 
             {/* Protocolo Integral */}
@@ -404,17 +423,23 @@ export function Protocol() {
               </div>
               <div className="mt-8 border-t border-ink/5 pt-6">
                 <div className="text-sm text-ink-muted">Valor por encontro</div>
-                <div className="font-display text-2xl font-semibold text-ink">R$350</div>
+                <div className="font-display text-2xl font-semibold text-ink">
+                  R${fmtPrice(settings.payment_integral_value_per_session)}
+                </div>
                 <div className="mt-2 space-y-1 text-sm text-ink-soft">
-                  <p>Plano mensal: <strong className="text-ink">R$1.400</strong></p>
-                  <p>Plano completo: <strong className="text-ink">R$4.200</strong></p>
-                  <p className="text-xs text-ink-muted">Parcelamento em até 10x com juros da operadora.</p>
+                  <p>Plano mensal: <strong className="text-ink">R${fmtPrice(settings.payment_integral_monthly)}</strong></p>
+                  <p>Plano completo: <strong className="text-ink">R${fmtPrice(settings.payment_integral_complete)}</strong></p>
+                  <p className="text-xs text-ink-muted">Parcelamento via Mercado Pago.</p>
                 </div>
               </div>
-              <button onClick={() => goToPayment('integral')} className="btn-primary mt-6 w-full">
-                Quero viver o Protocolo Integral
-                <ArrowRight className="h-4 w-4" />
-              </button>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <button onClick={() => goToPayment('integral', 'mensal')} className="btn-secondary w-full">
+                  Plano mensal
+                </button>
+                <button onClick={() => goToPayment('integral', 'completo')} className="btn-primary w-full">
+                  Plano completo
+                </button>
+              </div>
             </div>
           </div>
         </div>

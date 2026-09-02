@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Share2,
   Sparkles,
+  User,
   X,
 } from 'lucide-react'
 import { NeuralBackground } from '../../components/NeuralBackground'
@@ -97,7 +98,14 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
       <div className="absolute inset-0 bg-gradient-to-b from-white via-se-mist to-se-lavender/60" />
       <NeuralBackground className="opacity-40" />
 
-      <header className="relative z-10 px-6 py-6 md:px-12">
+      <header className="relative z-10 flex items-center justify-end px-6 py-6 md:px-12">
+        <button
+          onClick={() => navigate('/minha-area')}
+          className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+        >
+          <User className="h-3.5 w-3.5" />
+          Minha área
+        </button>
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-10 text-center">

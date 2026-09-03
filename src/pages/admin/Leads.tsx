@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Phone, Sparkles, Trash2, CheckCircle, XCircle, Clock, CalendarDays } from 'lucide-react'
+import { Phone, Sparkles, Trash2, CheckCircle, XCircle, Clock, Eye } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 
@@ -90,7 +90,7 @@ export function Leads() {
   }, [load])
 
   async function handleDelete(id: string, name: string) {
-    const confirmed = window.confirm(`Excluir o interesse de ${name}? Essa ação não pode ser desfeita.`)
+    const confirmed = window.confirm(`Excluir o perfil de ${name}? Essa ação não pode ser desfeita.`)
     if (!confirmed) return
     await supabase.from('payments').delete().eq('lead_id', id)
     await supabase.from('protocol_leads').delete().eq('id', id)
@@ -156,10 +156,10 @@ export function Leads() {
           Protocolo de Resgate de Identidade
         </div>
         <h1 className="mt-0.5 font-display text-2xl font-semibold text-ink md:text-3xl">
-          Interesses
+          Perfil terapêutico
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Pessoas que demonstraram interesse no protocolo, deixaram contato e realizaram pagamentos.
+          Perfis de pacientes com contato registrado, levantamento e pagamentos realizados.
         </p>
       </div>
 
@@ -202,10 +202,10 @@ export function Leads() {
             <Sparkles className="h-5 w-5 text-se-violet" />
             <h2 className="font-display text-lg font-semibold text-ink">
               {activeYear === 'todos' && activeMonth === 'todos'
-                ? 'Todos os interesses'
+                ? 'Todos os perfis'
                 : activeMonth === 'todos'
-                  ? `Interesses de ${activeYear}`
-                  : `Interesses de ${monthLabel(activeMonth)} ${yearKey(activeMonth)}`}
+                  ? `Perfis de ${activeYear}`
+                  : `Perfis de ${monthLabel(activeMonth)} ${yearKey(activeMonth)}`}
             </h2>
             <span className="rounded-full bg-se-lavender px-2.5 py-0.5 text-xs font-medium text-se-violet">
               {filteredLeads.length}
@@ -252,7 +252,7 @@ export function Leads() {
           </div>
         ) : filteredLeads.length === 0 ? (
           <div className="px-5 py-16 text-center text-sm text-ink-muted">
-            Nenhum interesse registrado neste mês.
+            Nenhum perfil registrado neste mês.
           </div>
         ) : (
           <>
@@ -290,9 +290,9 @@ export function Leads() {
                       <Link
                         to={`/admin/interesses/${lead.id}`}
                         className="rounded-full border border-se-violet/20 p-1.5 text-se-violet transition hover:bg-se-lavender"
-                        title="Ver agenda de atendimentos"
+                        title="Ver perfil terapêutico"
                       >
-                        <CalendarDays className="h-3.5 w-3.5" />
+                        <Eye className="h-3.5 w-3.5" />
                       </Link>
                       <button
                         onClick={() => handleDelete(lead.id, lead.name)}
@@ -351,10 +351,10 @@ export function Leads() {
                           <Link
                             to={`/admin/interesses/${lead.id}`}
                             className="inline-flex items-center gap-1.5 rounded-full border border-se-violet/20 px-3 py-1.5 text-xs font-medium text-se-violet transition hover:bg-se-lavender"
-                            title="Ver agenda de atendimentos"
+                            title="Ver perfil terapêutico"
                           >
-                            <CalendarDays className="h-3.5 w-3.5" />
-                            Agenda
+                            <Eye className="h-3.5 w-3.5" />
+                            Ver
                           </Link>
                           <button
                             onClick={() => handleDelete(lead.id, lead.name)}

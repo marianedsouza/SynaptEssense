@@ -9,12 +9,14 @@ import {
   Pencil,
   Phone,
   Save,
+  Sparkles,
   Trash2,
 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { supabase } from '../../lib/supabase'
 import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planQualityLabel } from '../../lib/protocol'
-import { addSession, deleteSession, fetchSessionsByLead, updateSessionStatus, type SessionRecord } from '../../lib/sessions'
+import { ARCHETYPE_META, type ArchetypeId } from '../../lib/intelligence'
+import { addSession, deleteSession, fetchSessionsByLead, updateSessionNotes, updateSessionStatus, type SessionRecord } from '../../lib/sessions'
 
 interface Lead {
   id: string
@@ -23,6 +25,7 @@ interface Lead {
   email: string | null
   modality: 'social' | 'integral'
   plan: 'mensal' | 'completo' | null
+  archetype: string | null
   user_id: string | null
   created_at: string
 }
@@ -53,6 +56,7 @@ export function LeadDetail() {
   const [notFound, setNotFound] = useState(false)
 
   const [newDate, setNewDate] = useState('')
+  const [newTime, setNewTime] = useState('')
   const [newNotes, setNewNotes] = useState('')
 
   const [editing, setEditing] = useState(false)
@@ -61,8 +65,10 @@ export function LeadDetail() {
   const [editEmail, setEditEmail] = useState('')
   const [editModality, setEditModality] = useState<'social' | 'integral'>('social')
   const [editPlan, setEditPlan] = useState<'mensal' | 'completo'>('completo')
+  const [editArchetype, setEditArchetype] = useState<string>('')
   const [editError, setEditError] = useState<string | null>(null)
   const [savingEdit, setSavingEdit] = useState(false)
+  const [archetypeStatus, setArchetypeStatus] = useState<string>('')
 
   const load = useCallback(async () => {
     if (!id) return
@@ -119,8 +125,9 @@ export function LeadDetail() {
 
   async function handleAdd() {
     if (!lead || !newDate) return
-    await addSession(lead.id, newDate, newNotes || undefined)
+    await addSession(lead.id, newDate, newTime || undefined, newNotes || undefined)
     setNewDate('')
+    setNewTime('')
     setNewNotes('')
     setSessions(await fetchSessionsByLead(lead.id))
   }
@@ -144,6 +151,7 @@ export function LeadDetail() {
     setEditEmail(lead.email || '')
     setEditModality(lead.modality)
     setEditPlan(lead.plan || 'completo')
+    setEditArchetype(lead.archetype || '')
     setEditError(null)
     setEditing(true)
   }
@@ -164,6 +172,7 @@ export function LeadDetail() {
         email: editEmail.trim(),
         modality: editModality,
         plan: editPlan,
+        archetype: editArchetype || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', lead.id)
@@ -182,9 +191,33 @@ export function LeadDetail() {
             email: editEmail.trim(),
             modality: editModality,
             plan: editPlan,
+            archetype: editArchetype || null,
           }
         : prev,
     )
+  }
+
+  async function handleSaveArchetype(value: string) {
+    if (!lead) return
+    setArchetypeStatus('saving')
+    const val = value || null
+    const { error } = await supabase
+      .from('protocol_leads')
+      .update({ archetype: val, updated_at: new Date().toISOString() })
+      .eq('id', lead.id)
+    if (error) {
+      setArchetypeStatus('error')
+      return
+    }
+    setLead((prev) => (prev ? { ...prev, archetype: val } : prev))
+    setArchetypeStatus('saved')
+    window.setTimeout(() => setArchetypeStatus(''), 2000)
+  }
+
+  async function handleSaveNotes(id: string, notes: string) {
+    if (!lead) return
+    await updateSessionNotes(id, notes)
+    setSessions(await fetchSessionsByLead(lead.id))
   }
 
   return (
@@ -253,6 +286,49 @@ export function LeadDetail() {
         </div>
       </div>
 
+      {/* Perfil do arquétipo */}
+      <div className="card mt-6 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-se-violet" />
+            <h2 className="font-display text-lg font-semibold text-ink">Perfil do arquétipo</h2>
+          </div>
+          <div className="sm:w-72">
+            <select
+              className="input"
+              value={lead.archetype ?? ''}
+              onChange={(e) => handleSaveArchetype(e.target.value)}
+            >
+              <option value="">Não definido</option>
+              {Object.entries(ARCHETYPE_META).map(([id, meta]) => (
+                <option key={id} value={id}>{meta.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {lead.archetype && ARCHETYPE_META[lead.archetype as ArchetypeId] ? (
+          <div className="mt-4">
+            <div className="flex flex-wrap gap-2">
+              {ARCHETYPE_META[lead.archetype as ArchetypeId].essence.map((e) => (
+                <span
+                  key={e}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${ARCHETYPE_META[lead.archetype as ArchetypeId].badge}`}
+                >
+                  {e}
+                </span>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-ink-muted">
+              {archetypeStatus === 'saving' ? 'Salvando…' : archetypeStatus === 'saved' ? 'Arquétipo atualizado.' : archetypeStatus === 'error' ? 'Não foi possível salvar.' : 'Selecione o arquétipo dominante para este paciente.'}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink-muted">
+            Defina o arquétipo dominante do paciente para acompanhar seu perfil evolutivo.
+          </p>
+        )}
+      </div>
+
       {editing && (
         <div className="card mt-6 p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -286,6 +362,15 @@ export function LeadDetail() {
                 <option value="completo">Plano completo</option>
               </select>
             </div>
+            <div>
+              <label className="label">Perfil do arquétipo</label>
+              <select className="input" value={editArchetype} onChange={(e) => setEditArchetype(e.target.value)}>
+                <option value="">Não definido</option>
+                {Object.entries(ARCHETYPE_META).map(([id, meta]) => (
+                  <option key={id} value={id}>{meta.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
           {editError && <p className="mt-3 text-xs text-red-600">{editError}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
@@ -316,6 +401,10 @@ export function LeadDetail() {
               <label className="label">Data do atendimento</label>
               <input type="date" className="input" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
             </div>
+            <div className="sm:w-36">
+              <label className="label">Hora (opcional)</label>
+              <input type="time" className="input" value={newTime} onChange={(e) => setNewTime(e.target.value)} />
+            </div>
             <div className="flex-1">
               <label className="label">Observação (opcional)</label>
               <input className="input" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="Ex: 1º encontro de apresentação" />
@@ -337,6 +426,7 @@ export function LeadDetail() {
               <thead>
                 <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
                   <th className="px-5 py-3 font-semibold">Data</th>
+                  <th className="px-5 py-3 font-semibold">Hora</th>
                   <th className="px-5 py-3 font-semibold">Observação</th>
                   <th className="px-5 py-3 font-semibold">Status</th>
                   <th className="px-5 py-3 text-right font-semibold">Ações</th>
@@ -346,7 +436,14 @@ export function LeadDetail() {
                 {sessions.map((s) => (
                   <tr key={s.id} className="border-b border-ink/5 last:border-b-0">
                     <td className="px-5 py-3 font-medium text-ink">{fmtDate(s.date)}</td>
-                    <td className="px-5 py-3 text-ink-soft">{s.notes || '—'}</td>
+                    <td className="px-5 py-3 text-ink-soft">{s.time || '—'}</td>
+                    <td className="px-5 py-3">
+                      <SessionNotesEditor
+                        key={s.id}
+                        initial={s.notes}
+                        onChange={(notes) => handleSaveNotes(s.id, notes)}
+                      />
+                    </td>
                     <td className="px-5 py-3">
                       <select
                         value={s.status}
@@ -403,5 +500,41 @@ export function LeadDetail() {
         </button>
       </div>
     </AdminLayout>
+  )
+}
+
+function SessionNotesEditor({ initial, onChange }: { initial: string | null; onChange: (notes: string) => void }) {
+  const [value, setValue] = useState(initial ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  async function commit() {
+    setSaving(true)
+    await onChange(value.trim())
+    setSaving(false)
+    setSaved(true)
+    window.setTimeout(() => setSaved(false), 1500)
+  }
+
+  return (
+    <div className="group flex items-center gap-2">
+      <input
+        className="w-full min-w-[160px] rounded-lg border border-ink/10 bg-transparent px-2 py-1 text-sm text-ink focus:border-se-violet focus:bg-white focus:outline-none"
+        value={value}
+        placeholder="Adicionar observação…"
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            ;(e.target as HTMLInputElement).blur()
+          }
+        }}
+      />
+      {saving ? (
+        <span className="shrink-0 text-[10px] text-ink-muted">Salvando…</span>
+      ) : saved ? (
+        <span className="shrink-0 text-[10px] font-semibold text-se-teal">Salva</span>
+      ) : null}
+    </div>
   )
 }

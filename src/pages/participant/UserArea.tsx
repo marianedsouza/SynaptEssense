@@ -572,7 +572,10 @@ export function UserArea() {
                   {sessions.map((s) => (
                     <div key={s.id} className="flex items-center justify-between gap-3 rounded-2xl border border-ink/5 bg-se-mist/50 px-4 py-3">
                       <div>
-                        <div className="text-sm font-medium text-ink">{fmtDate(s.date)}</div>
+                        <div className="text-sm font-medium text-ink">
+                          {fmtDate(s.date)}
+                          {s.time && <span className="ml-2 text-sm font-semibold text-se-violet">{s.time}</span>}
+                        </div>
                         {s.notes && <div className="mt-0.5 text-xs text-ink-muted">{s.notes}</div>}
                       </div>
                       <SessionBadge status={s.status} />

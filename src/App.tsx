@@ -38,6 +38,9 @@ const Leads = lazy(() =>
 const LeadDetail = lazy(() =>
   import('./pages/admin/LeadDetail').then((m) => ({ default: m.LeadDetail })),
 )
+const TherapistAgenda = lazy(() =>
+  import('./pages/admin/TherapistAgenda').then((m) => ({ default: m.TherapistAgenda })),
+)
 
 function Fallback() {
   return (
@@ -128,6 +131,10 @@ function App() {
             <Route
               path="/admin/interesses/:id"
               element={<AdminRoute><LeadDetail /></AdminRoute>}
+            />
+            <Route
+              path="/admin/agenda"
+              element={<AdminRoute><TherapistAgenda /></AdminRoute>}
             />
             <Route
               path="/admin/configuracoes"

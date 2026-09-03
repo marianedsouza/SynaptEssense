@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, LogOut, Settings, Sparkles, Users } from 'lucide-react'
+import { CalendarDays, LayoutDashboard, LogOut, Settings, Sparkles, Users } from 'lucide-react'
 import { Logo } from '../Logo'
 import { supabase } from '../../lib/supabase'
 
 const navItems = [
   { to: '/admin', label: 'Vis\u00e3o geral', icon: LayoutDashboard, end: true, badge: false },
-  { to: '/admin/interesses', label: 'Interesses', icon: Sparkles, end: true, badge: true },
+  { to: '/admin/agenda', label: 'Agenda', icon: CalendarDays, end: true, badge: false },
+  { to: '/admin/interesses', label: 'Perfis', icon: Sparkles, end: true, badge: true },
   { to: '/admin/participantes', label: 'Participantes', icon: Users, end: true, badge: false },
   { to: '/admin/configuracoes', label: 'Configura\u00e7\u00f5es', icon: Settings, end: true, badge: false },
 ]

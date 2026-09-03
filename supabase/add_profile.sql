@@ -11,4 +11,8 @@ alter table public.sessions
 alter table public.protocol_leads
   add column if not exists archetype text;
 
+-- Observação geral do paciente (perfil)
+alter table public.protocol_leads
+  add column if not exists notas text;
+
 -- Observações das sessões ficam no campo notes de sessions (já existente).

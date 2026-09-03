@@ -26,6 +26,7 @@ interface Lead {
   modality: 'social' | 'integral'
   plan: 'mensal' | 'completo' | null
   archetype: string | null
+  notas: string | null
   user_id: string | null
   created_at: string
 }
@@ -220,6 +221,16 @@ export function LeadDetail() {
     setSessions(await fetchSessionsByLead(lead.id))
   }
 
+  async function handleSaveNotas(notas: string) {
+    if (!lead) return
+    const val = notas || null
+    await supabase
+      .from('protocol_leads')
+      .update({ notas: val, updated_at: new Date().toISOString() })
+      .eq('id', lead.id)
+    setLead((prev) => (prev ? { ...prev, notas: val } : prev))
+  }
+
   return (
     <AdminLayout>
       <div className="mb-6">
@@ -327,6 +338,13 @@ export function LeadDetail() {
             Defina o arquétipo dominante do paciente para acompanhar seu perfil evolutivo.
           </p>
         )}
+
+        <div className="mt-6 border-t border-ink/5 pt-5">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">
+            Observação geral
+          </div>
+          <NotasEditor initial={lead.notas} onChange={handleSaveNotas} />
+        </div>
       </div>
 
       {editing && (
@@ -535,6 +553,32 @@ function SessionNotesEditor({ initial, onChange }: { initial: string | null; onC
       ) : saved ? (
         <span className="shrink-0 text-[10px] font-semibold text-se-teal">Salva</span>
       ) : null}
+    </div>
+  )
+}
+
+function NotasEditor({ initial, onChange }: { initial: string | null; onChange: (notas: string) => void }) {
+  const [value, setValue] = useState(initial ?? '')
+  const [saved, setSaved] = useState(false)
+
+  async function commit() {
+    await onChange(value.trim())
+    setSaved(true)
+    window.setTimeout(() => setSaved(false), 1500)
+  }
+
+  return (
+    <div>
+      <textarea
+        className="input mt-2 min-h-[96px] w-full resize-y"
+        value={value}
+        placeholder="Observações gerais sobre o paciente (histórico, perfil, pendências)…"
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={commit}
+      />
+      <div className="mt-1 flex items-center justify-end text-[10px] text-ink-muted">
+        {saved ? <span className="font-semibold text-se-teal">Observação salva</span> : 'Salva automaticamente ao sair do campo'}
+      </div>
     </div>
   )
 }

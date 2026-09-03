@@ -5,6 +5,7 @@ import {
   CalendarPlus,
   CalendarDays,
   CheckCircle2,
+  ClipboardList,
   Clock,
   Pencil,
   Phone,
@@ -38,6 +39,20 @@ interface PaymentRecord {
   created_at: string
 }
 
+interface ParticipantSummary {
+  id: string
+  name: string | null
+  email: string | null
+  city: string | null
+  state: string | null
+  field: string | null
+  organization: string | null
+  survey_for: string | null
+  status: string
+  progress: number
+  completed_at: string | null
+}
+
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
@@ -53,6 +68,8 @@ export function LeadDetail() {
   const [lead, setLead] = useState<Lead | null>(null)
   const [payments, setPayments] = useState<PaymentRecord[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
+  const [participant, setParticipant] = useState<ParticipantSummary | null>(null)
+  const [participantLoading, setParticipantLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -86,6 +103,21 @@ export function LeadDetail() {
     setLead(leadData)
     setPayments((payRes.data ?? []) as PaymentRecord[])
     setSessions(await fetchSessionsByLead(leadData.id))
+
+    if (leadData.email) {
+      const key = leadData.email.trim().toLowerCase()
+      setParticipantLoading(true)
+      const { data: participantRes } = await supabase
+        .from('participants')
+        .select('id, name, email, city, state, field, organization, survey_for, status, progress, completed_at')
+        .ilike('email', key)
+        .maybeSingle()
+      setParticipant((participantRes || null) as ParticipantSummary | null)
+      setParticipantLoading(false)
+    } else {
+      setParticipant(null)
+    }
+
     setLoading(false)
   }, [id])
 
@@ -295,6 +327,111 @@ export function LeadDetail() {
             {payments.length} pagamento{payments.length === 1 ? '' : 's'} registrado{payments.length === 1 ? '' : 's'}
           </div>
         </div>
+      </div>
+
+      {/* Levantamento (testes) vinculado */}
+      <div className="card mt-6 p-6">
+        <div className="flex items-center gap-2">
+          <ClipboardList className="h-5 w-5 text-se-teal" />
+          <h2 className="font-display text-lg font-semibold text-ink">Levantamento (testes)</h2>
+          {lead.email && (
+            <span className="rounded-full bg-se-mist px-2.5 py-0.5 text-[11px] font-medium text-ink-muted">
+              buscado por {lead.email}
+            </span>
+          )}
+        </div>
+
+        {participantLoading ? (
+          <div className="flex justify-center py-10">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-se-teal border-t-transparent" />
+          </div>
+        ) : participant ? (
+          <div className="mt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                  participant.status === 'concluido'
+                    ? 'bg-se-green-soft text-se-green'
+                    : participant.status === 'em_andamento'
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-se-sky text-se-teal'
+                }`}
+              >
+                {participant.status === 'concluido'
+                  ? 'Levantamento concluído'
+                  : participant.status === 'em_andamento'
+                    ? `Em andamento · ${participant.progress ?? 0}%`
+                    : `Iniciado · ${participant.progress ?? 0}%`}
+              </span>
+              {participant.survey_for && (
+                <span className="rounded-full bg-se-lavender px-3 py-1 text-xs font-medium text-se-violet">
+                  {participant.survey_for}
+                </span>
+              )}
+              {participant.completed_at && (
+                <span className="text-xs text-ink-muted">
+                  Concluído em {fmtDate(participant.completed_at)}
+                </span>
+              )}
+              <Link
+                to={`/admin/participantes/${participant.id}`}
+                className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-se-violet/20 px-3 py-1.5 text-xs font-medium text-se-violet transition hover:bg-se-lavender"
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+                Ver levantamento
+              </Link>
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Nome</div>
+                <div className="mt-1 text-sm font-medium text-ink">{participant.name || '—'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">E-mail</div>
+                <div className="mt-1 text-sm text-ink-soft">{participant.email || '—'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Cidade / UF</div>
+                <div className="mt-1 text-sm text-ink-soft">
+                  {[participant.city, participant.state].filter(Boolean).join(' / ') || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Área</div>
+                <div className="mt-1 text-sm text-ink-soft">{participant.field || '—'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Organização</div>
+                <div className="mt-1 text-sm text-ink-soft">{participant.organization || '—'}</div>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Progresso</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="h-1.5 w-24 overflow-hidden rounded-full bg-ink/5">
+                    <div
+                      className="bg-grad h-full rounded-full"
+                      style={{ width: `${participant.progress ?? 0}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-ink-muted">{participant.progress ?? 0}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink-muted">
+            {lead.email ? (
+              <>
+                Nenhum participante encontrado com o e-mail{' '}
+                <span className="font-medium text-ink">{lead.email}</span>. O levantamento ainda não foi feito com
+                este e-mail.
+              </>
+            ) : (
+              'Este perfil ainda não possui um e-mail de cadastro para localizar o levantamento.'
+            )}
+          </p>
+        )}
       </div>
 
       {/* Perfil do arquétipo */}

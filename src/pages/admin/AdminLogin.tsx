@@ -65,6 +65,7 @@ export function AdminLogin() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
+                autoFocus
               />
             </div>
             <div>

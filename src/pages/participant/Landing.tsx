@@ -346,6 +346,12 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
                 individual do SynaptEssence360&#174;, que transforma autoconhecimento
                 em posicionamento, express&#227;o e impacto com ess&#234;ncia.
               </p>
+              <button
+                onClick={() => { setShowMethodology(false); navigate('/protocolo#como-funciona') }}
+                className="btn-secondary mt-2 w-full text-sm"
+              >
+                Como funciona o protocolo
+              </button>
             </div>
           </div>
         </div>

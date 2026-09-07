@@ -149,6 +149,19 @@ export function Protocol() {
     }
   }, [searchParams])
 
+  // Scroll para seção quando a Landing navega com hash (ex.: /protocolo#como-funciona)
+  useEffect(() => {
+    function scrollToHash() {
+      const id = window.location.hash.replace('#', '')
+      if (!id) return
+      const el = document.getElementById(id)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    const t = setTimeout(scrollToHash, 200)
+    window.addEventListener('hashchange', scrollToHash)
+    return () => { clearTimeout(t); window.removeEventListener('hashchange', scrollToHash) }
+  }, [])
+
   // Animate on scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -222,6 +235,33 @@ export function Protocol() {
         </div>
       </section>
 
+      {/* ─── COMO FUNCIONA ─── */}
+      <section id="como-funciona" className="relative z-10 bg-white/50 px-6 py-20 backdrop-blur-sm md:py-28">
+        <div className="mx-auto max-w-4xl" data-animate>
+          <h2 className="text-center font-display text-2xl font-semibold text-ink md:text-4xl">
+            Como funciona
+          </h2>
+          <div className="mx-auto mt-12 grid max-w-2xl gap-4 sm:grid-cols-2">
+            {[
+              '12 encontros',
+              '1 encontro por semana',
+              '90 dias',
+              'Processo individual',
+              'Metodologia SynaptEssence360®',
+              'Exercícios entre sessões',
+              'Plano de continuidade',
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3 rounded-xl border border-ink/5 bg-white px-5 py-4">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-se-teal/10">
+                  <Check className="h-3.5 w-3.5 text-se-teal" />
+                </div>
+                <span className="text-sm font-medium text-ink">{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── POR QUE 90 DIAS ─── */}
       <section className="relative z-10 px-6 py-20 md:py-28">
         <div className="mx-auto max-w-4xl" data-animate>
@@ -244,33 +284,6 @@ export function Protocol() {
                     <ChevronDown className="h-4 w-4 text-se-violet/40" />
                   </div>
                 )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── COMO FUNCIONA ─── */}
-      <section className="relative z-10 bg-white/50 px-6 py-20 backdrop-blur-sm md:py-28">
-        <div className="mx-auto max-w-4xl" data-animate>
-          <h2 className="text-center font-display text-2xl font-semibold text-ink md:text-4xl">
-            Como funciona
-          </h2>
-          <div className="mx-auto mt-12 grid max-w-2xl gap-4 sm:grid-cols-2">
-            {[
-              '12 encontros',
-              '1 encontro por semana',
-              '90 dias',
-              'Processo individual',
-              'Metodologia SynaptEssence360®',
-              'Exercícios entre sessões',
-              'Plano de continuidade',
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3 rounded-xl border border-ink/5 bg-white px-5 py-4">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-se-teal/10">
-                  <Check className="h-3.5 w-3.5 text-se-teal" />
-                </div>
-                <span className="text-sm font-medium text-ink">{item}</span>
               </div>
             ))}
           </div>

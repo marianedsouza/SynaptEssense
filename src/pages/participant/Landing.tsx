@@ -155,7 +155,7 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
             className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
           >
             <button
-              onClick={() => navigate('/recepcao')}
+              onClick={() => navigate('/protocolo?diagnostico=1')}
               className="btn-primary group"
             >
               Iniciar levantamento

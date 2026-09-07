@@ -89,6 +89,35 @@ npm run build
 
 O diretório `dist/` pode ser publicado em Vercel, Netlify, Cloudflare Pages ou outro host estático. Configure as duas variáveis `VITE_*` no host.
 
+### 7. Lembretes automáticos por e-mail
+
+O fluxo de comunicação com o participante é feito por um **cron do Vercel** que roda diariamente às 12h UTC (09h no Brasil) chamando `api/send-reminders.ts`:
+
+- **Pagamento pendente** — quando alguém entra no protocolo, gera a preferência de pagamento e não conclui, recebe um e-mail de chamamento para concluir o pagamento (com plano, valor e link para a área). Considera pagamentos pendentes criados há mais de 30 minutos.
+- **Consulta agendada (D-1)** — participantes com sessão `agendada` para **amanhã** recebem um e-mail no dia anterior, com data, horário e orientações.
+
+**1. Banco de dados:**
+
+Execute no SQL Editor do Supabase o arquivo [`supabase/mail-reminders.sql`](supabase/mail-reminders.sql) — adiciona colunas `reminder_sent_at` e `reminder_count` em `payments` e `sessions` para evitar envios duplicados.
+
+**2. Provedor de e-mail (Resend):**
+
+1. Crie uma conta em [resend.com](https://resend.com) e adicione o domínio `synaptessence.com.br`.
+2. Gere uma API Key (`re_...`).
+
+**3. Variáveis de ambiente no Vercel** (Settings → Environment Variables):
+
+| Variável | Descrição |
+|---|---|
+| `CRON_SECRET` | segredo usado pelo cron para autorizar a chamada (qualquer string longa e aleatória) |
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | chave de serviço do Supabase (Settings → API → service_role) |
+| `RESEND_API_KEY` | API Key do Resend |
+| `EMAIL_FROM` | remetente, ex.: `contato@synaptessence.com.br` (domínio verificado no Resend) |
+| `SITE_URL` | URL pública do site, ex.: `https://synapt-essense.vercel.app` |
+
+> O `vercel.json` já declara o cron `0 12 * * *`. Para testar manualmente: `curl -X POST https://<seu-site>/api/send-reminders -H "Authorization: Bearer <CRON_SECRET>"`. O endpoint exige o `CRON_SECRET` e só envia um e-mail por registro (colunas `reminder_sent_at`/`reminder_count`).
+
 ## Arquitetura
 
 ```
@@ -101,6 +130,7 @@ src/
 │   ├── axes.ts           # Metadados dos eixos (transições)
 │   ├── participants.ts   # Operações RPC do participante
 │   ├── admin.ts          # Consultas do painel do analista
+│   ├── sessions.ts       # Agendamento de sessões (dossiê/agenda)
 │   ├── export.ts         # PDF + Excel
 │   ├── settings.ts       # Textos configuráveis
 │   └── types.ts
@@ -108,9 +138,13 @@ src/
 │   ├── participant/   # Landing → … → Conclusão
 │   └── admin/         # Login, Visão geral, Dossiê, Configurações
 └── App.tsx            # Rotas
+api/
+├── mercadopago-webhook.ts  # Webhook de pagamentos (Vercel Function)
+└── send-reminders.ts       # Cron de lembretes (pagamento pendente + consulta D-1)
 supabase/
 ├── schema.sql         # Tabelas, RLS, RPCs
-└── seed.sql           # Perguntas + configurações (gerado)
+├── seed.sql           # Perguntas + configurações (gerado)
+└── *.sql              # Migrações incrementais (pagamentos, sessões, lembretes)
 scripts/
 └── generate-seed.mjs  # Gera o seed a partir do questionBank
 ```

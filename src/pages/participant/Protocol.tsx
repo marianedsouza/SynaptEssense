@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, ChevronDown, User } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
@@ -86,6 +86,7 @@ function fmtPrice(value?: string) {
 
 export function Protocol() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { settings } = useSettings()
   const [showDiagnostic, setShowDiagnostic] = useState(false)
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -137,6 +138,16 @@ export function Protocol() {
       modalitiesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 100)
   }
+
+  // Abre o diagnóstico de momento quando acionado a partir de "Iniciar levantamento"
+  useEffect(() => {
+    if (searchParams.get('diagnostico') === '1') {
+      setShowDiagnostic(true)
+      setCurrentQuestion(0)
+      setAnswers([null, null, null, null, null])
+      setShowResult(false)
+    }
+  }, [searchParams])
 
   // Animate on scroll
   useEffect(() => {

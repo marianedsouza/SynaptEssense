@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Check, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User, Pencil } from 'lucide-react'
+import { CalendarDays, Check, ClipboardList, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User, Pencil } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
 import { useSettings } from '../../context/SettingsContext'
 import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planDurationMonths, planQualityLabel } from '../../lib/protocol'
 import { fetchSessionsByLead, type SessionRecord } from '../../lib/sessions'
+import { getParticipantByEmail, setSessionId } from '../../lib/participants'
+import type { Participant } from '../../lib/types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -49,6 +51,7 @@ export function UserArea() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [payments, setPayments] = useState<PayRecord[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
+  const [participant, setParticipant] = useState<Participant | null | undefined>(undefined)
   const [loading, setLoading] = useState(true)
 
   const [switchOpen, setSwitchOpen] = useState(false)
@@ -89,6 +92,7 @@ export function UserArea() {
     if (firstLead) {
       setSessions(await fetchSessionsByLead(firstLead.id))
     }
+    setParticipant(await getParticipantByEmail(email))
     setLoading(false)
   }, [navigate])
 
@@ -184,6 +188,19 @@ export function UserArea() {
     setSwitchOpen(false)
     setSavingSwitch(false)
     await load()
+  }
+
+  function handleStartSurvey() {
+    if (!participant) {
+      navigate(`/identificacao?email=${encodeURIComponent(user?.email ?? '')}`)
+      return
+    }
+    if (participant.status === 'concluido') {
+      navigate('/concluido')
+      return
+    }
+    setSessionId(participant.id)
+    navigate('/levantamento')
   }
 
   const lastLead = leads[0]
@@ -490,6 +507,45 @@ export function UserArea() {
                 </div>
               </div>
             </div>
+
+            {/* Levantamento */}
+            {isPaid && (
+              <div className="card mt-6 p-6 md:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-se-violet" />
+                    <h2 className="font-display text-lg font-semibold text-ink">Levantamento</h2>
+                  </div>
+                  {participant?.status === 'concluido' ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-se-teal/10 px-3 py-1 text-xs font-semibold text-se-teal">
+                      <Check className="h-3.5 w-3.5" /> Realizado
+                    </span>
+                  ) : participant ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-se-lavender px-3 py-1 text-xs font-semibold text-se-violet">
+                      Em andamento
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-3 text-sm text-ink-soft">
+                  {participant?.status === 'concluido'
+                    ? 'Você já realizou seu levantamento. A devolutiva acontece com sua analista.'
+                    : participant
+                      ? 'Continue seu levantamento de onde parou. Suas respostas são sigilosas e individuais.'
+                      : 'Seu levantamento foi liberado. Preencha suas informações e responda ao questionário — suas respostas são sigilosas e individuais.'}
+                </p>
+                <button
+                  onClick={handleStartSurvey}
+                  className="btn-primary mt-5"
+                >
+                  {participant?.status === 'concluido'
+                    ? 'Ver conclusão'
+                    : participant
+                      ? 'Continuar levantamento'
+                      : 'Iniciar levantamento'}
+                  <ClipboardList className="h-4 w-4" />
+                </button>
+              </div>
+            )}
 
             {/* Payments / amounts paid */}
             <div className="card mt-6 p-6 md:p-8">

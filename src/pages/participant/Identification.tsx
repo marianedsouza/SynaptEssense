@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { ParticipantLayout } from '../../components/ParticipantLayout'
 import { createParticipant, setSessionId } from '../../lib/participants'
@@ -43,7 +43,8 @@ const EMPTY: IdentificationData = {
 
 export function Identification() {
   const navigate = useNavigate()
-  const [data, setData] = useState<IdentificationData>(EMPTY)
+  const [searchParams] = useSearchParams()
+  const [data, setData] = useState<IdentificationData>({ ...EMPTY, email: searchParams.get('email') ?? '' })
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -116,7 +117,11 @@ export function Identification() {
               value={data.email}
               onChange={(e) => set('email', e.target.value)}
               placeholder="melhor@email.com"
+              readOnly={searchParams.has('email')}
             />
+            {searchParams.has('email') && (
+              <p className="mt-1.5 text-xs text-ink-muted">Usaremos o e-mail da sua conta para vincular seu levantamento.</p>
+            )}
           </div>
 
           <div>

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Lock } from 'lucide-react'
 import { Logo } from '../../components/Logo'
+import { supabase } from '../../lib/supabase'
 import { AXIS } from '../../lib/axes'
 import { LIKERT_SCALE } from '../../lib/questionBank'
 import { buildQuestionList } from '../../lib/questionUtils'
@@ -38,6 +39,7 @@ export function Questionnaire() {
   const navigate = useNavigate()
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [loading, setLoading] = useState(true)
+  const [gate, setGate] = useState<'checking' | 'ok' | 'blocked'>('checking')
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const [index, setIndex] = useState(0)
   const [saved, setSaved] = useState(false)
@@ -66,7 +68,7 @@ export function Questionnaire() {
       navigate('/', { replace: true })
       return
     }
-    fetchParticipant(id).then((p) => {
+    fetchParticipant(id).then(async (p) => {
       if (!p) {
         navigate('/', { replace: true })
         return
@@ -75,6 +77,17 @@ export function Questionnaire() {
         navigate('/concluido', { replace: true })
         return
       }
+      let approved = false
+      const email = (p.email ?? '').trim().toLowerCase()
+      if (email) {
+        const { count, error } = await supabase
+          .from('payments')
+          .select('*', { count: 'exact', head: true })
+          .ilike('payer_email', email)
+          .eq('status', 'approved')
+        approved = !error && (count ?? 0) > 0
+      }
+      setGate(approved ? 'ok' : 'blocked')
       setParticipant(p)
       setAnswers(p.answers ?? {})
       setLoading(false)
@@ -173,6 +186,36 @@ export function Questionnaire() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-se-violet border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (gate === 'blocked') {
+    return (
+      <div className="relative min-h-screen overflow-hidden bg-se-mist">
+        <div className="flex min-h-screen items-center justify-center px-6">
+          <div className="w-full max-w-md text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-se-lavender">
+              <Lock className="h-8 w-8 text-se-violet" />
+            </div>
+            <h1 className="mt-6 font-display text-2xl font-semibold text-ink">
+              Levantamento disponível após a ativação do protocolo
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+              Seu levantamento será liberado assim que um protocolo for ativado para você. 
+              Ao entrar em um protocolo e concluir o pagamento, você poderá realizar o 
+              questionário na sua área do participante.
+            </p>
+            <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
+              <button onClick={() => navigate('/protocolo')} className="btn-primary">
+                Conhecer os protocolos
+              </button>
+              <button onClick={() => navigate('/minha-area')} className="btn-secondary">
+                Minha área
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

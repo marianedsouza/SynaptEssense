@@ -8,7 +8,7 @@ export function Completion() {
 
   const handleFinish = () => {
     clearSession()
-    navigate('/obrigado', { replace: true })
+    navigate('/minha-area', { replace: true })
   }
 
   return (
@@ -21,18 +21,18 @@ export function Completion() {
           Levantamento concluído.
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink-soft">
-          Você acabou de concluir uma primeira etapa de uma jornada de
-          compreensão e desenvolvimento.
+          Você acabou de concluir seu levantamento.
         </p>
         <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-ink-soft">
           Suas respostas foram registradas com sucesso e serão analisadas
           individualmente.
         </p>
         <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed text-ink-soft">
-          Em breve entraremos em contato para agendar sua reunião de devolutiva.
+          A devolutiva e o acompanhamento acontecem em suas sessões com a
+          analista — você não recebe resultados por aqui.
         </p>
         <button onClick={handleFinish} className="btn-primary mt-10">
-          Concluir
+          Voltar para minha área
         </button>
       </div>
     </ParticipantLayout>

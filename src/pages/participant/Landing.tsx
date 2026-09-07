@@ -348,9 +348,10 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
               </p>
               <button
                 onClick={() => { setShowMethodology(false); navigate('/protocolo#como-funciona') }}
-                className="btn-secondary mt-2 w-full text-sm"
+                className="btn-primary group mt-2 w-full text-sm"
               >
                 Como funciona o protocolo
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </div>
           </div>

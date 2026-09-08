@@ -41,6 +41,9 @@ const LeadDetail = lazy(() =>
 const TherapistAgenda = lazy(() =>
   import('./pages/admin/TherapistAgenda').then((m) => ({ default: m.TherapistAgenda })),
 )
+const ShareLinks = lazy(() =>
+  import('./pages/admin/ShareLinks').then((m) => ({ default: m.ShareLinks })),
+)
 
 function Fallback() {
   return (
@@ -139,6 +142,10 @@ function App() {
             <Route
               path="/admin/configuracoes"
               element={<AdminRoute><Settings /></AdminRoute>}
+            />
+            <Route
+              path="/admin/compartilhar"
+              element={<AdminRoute><ShareLinks /></AdminRoute>}
             />
 
             <Route path="*" element={<Navigate to="/" replace />} />

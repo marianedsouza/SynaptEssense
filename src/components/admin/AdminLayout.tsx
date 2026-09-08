@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { CalendarDays, LayoutDashboard, LogOut, Settings, Sparkles, Users } from 'lucide-react'
+import { CalendarDays, LayoutDashboard, Link2, LogOut, Settings, Sparkles, Users } from 'lucide-react'
 import { Logo } from '../Logo'
 import { supabase } from '../../lib/supabase'
 
 const navItems = [
-  { to: '/admin', label: 'Vis\u00e3o geral', icon: LayoutDashboard, end: true, badge: false },
+  { to: '/admin', label: 'Visão geral', icon: LayoutDashboard, end: true, badge: false },
   { to: '/admin/agenda', label: 'Agenda', icon: CalendarDays, end: true, badge: false },
   { to: '/admin/interesses', label: 'Perfis', icon: Sparkles, end: true, badge: true },
   { to: '/admin/participantes', label: 'Levantamento', icon: Users, end: true, badge: false },
-  { to: '/admin/configuracoes', label: 'Configura\u00e7\u00f5es', icon: Settings, end: true, badge: false },
+  { to: '/admin/compartilhar', label: 'Compartilhar', icon: Link2, end: true, badge: false },
+  { to: '/admin/configuracoes', label: 'Configurações', icon: Settings, end: true, badge: false },
 ]
 
 export function AdminLayout({ children }: { children: ReactNode }) {

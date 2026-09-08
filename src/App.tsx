@@ -147,6 +147,10 @@ function App() {
               path="/admin/compartilhar"
               element={<AdminRoute><ShareLinks /></AdminRoute>}
             />
+            <Route
+              path="/admin/preview"
+              element={<AdminRoute><UserArea /></AdminRoute>}
+            />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

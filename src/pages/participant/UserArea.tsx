@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Check, ClipboardList, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User, Pencil } from 'lucide-react'
+import { CalendarDays, Check, ClipboardList, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User, Pencil, Eye } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
@@ -61,18 +61,25 @@ export function UserArea() {
   const [savingSwitch, setSavingSwitch] = useState(false)
 
   const statusParam = searchParams.get('status')
+  const previewEmail = searchParams.get('email')?.toLowerCase() ?? null
+  const isPreview = Boolean(previewEmail)
 
   const load = useCallback(async () => {
-    const {
-      data: { user: u },
-    } = await supabase.auth.getUser()
-    if (!u) {
-      navigate('/minha-area/login', { replace: true })
-      return
-    }
-    setUser({ email: u.email ?? '' })
+    let email = previewEmail ?? null
 
-    const email = (u.email ?? '').toLowerCase()
+    if (!email) {
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser()
+      if (!u) {
+        navigate('/minha-area/login', { replace: true })
+        return
+      }
+      email = (u.email ?? '').toLowerCase()
+    }
+
+    setUser({ email: email ?? '' })
+
     const [leadsRes, paysRes] = await Promise.all([
       supabase
         .from('protocol_leads')
@@ -94,7 +101,7 @@ export function UserArea() {
     }
     setParticipant(await getParticipantByEmail(email))
     setLoading(false)
-  }, [navigate])
+  }, [navigate, previewEmail])
 
   useEffect(() => {
     load()
@@ -255,23 +262,42 @@ export function UserArea() {
       <NeuralBackground className="opacity-20 fixed inset-0" />
 
       <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
-        <button onClick={() => navigate('/')} className="transition hover:opacity-70">
+        <button onClick={() => (isPreview ? navigate('/admin') : navigate('/'))} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
-        <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-3 py-1.5 text-xs text-ink-soft sm:inline-flex">
-            <User className="h-3.5 w-3.5" />
-            {user?.email}
-          </span>
+        {isPreview ? (
           <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-red-300 hover:text-red-600"
+            onClick={() => navigate('/admin')}
+            className="flex items-center gap-1.5 rounded-full border border-se-violet/30 bg-white/80 px-4 py-2 text-xs font-medium text-se-violet backdrop-blur transition hover:bg-se-lavender"
           >
-            <LogOut className="h-3.5 w-3.5" />
-            Sair
+            <Eye className="h-3.5 w-3.5" />
+            Voltar ao painel
           </button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-3 py-1.5 text-xs text-ink-soft sm:inline-flex">
+              <User className="h-3.5 w-3.5" />
+              {user?.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-red-300 hover:text-red-600"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sair
+            </button>
+          </div>
+        )}
       </header>
+
+      {isPreview && (
+        <div className="relative z-10 border-y border-se-violet/20 bg-se-lavender/40 py-2.5 text-center backdrop-blur-sm">
+          <span className="text-xs font-medium text-se-violet-dark">
+            Pré-visualização do analista — você está vendo a área do paciente como{' '}
+            <strong>{user?.email}</strong>
+          </span>
+        </div>
+      )}
 
       <main className="relative z-10 mx-auto max-w-3xl px-6 pb-20 pt-8">
         {/* Payment status banner */}
@@ -350,7 +376,7 @@ export function UserArea() {
               </div>
 
               <div className="flex flex-col items-stretch gap-2 sm:items-end">
-                {isPaid && finished && (
+                {isPaid && finished && !isPreview && (
                   <button
                     onClick={() => handleCreatePayment(lastLead.plan)}
                     disabled={paying}
@@ -365,7 +391,7 @@ export function UserArea() {
                     Em andamento • {remaining} sessão{remaining === 1 ? '' : 's'} restante{remaining === 1 ? '' : 's'}
                   </span>
                 )}
-                {!isPaid && (
+                {!isPaid && !isPreview && (
                   <>
                     <button
                       onClick={() => handleCreatePayment(lastLead.plan)}
@@ -535,13 +561,16 @@ export function UserArea() {
                 </p>
                 <button
                   onClick={handleStartSurvey}
-                  className="btn-primary mt-5"
+                  disabled={isPreview}
+                  className="btn-primary mt-5 disabled:opacity-40"
                 >
-                  {participant?.status === 'concluido'
-                    ? 'Ver conclusão'
-                    : participant
-                      ? 'Continuar levantamento'
-                      : 'Iniciar levantamento'}
+                  {isPreview
+                    ? 'Ações desabilitadas na pré-visualização'
+                    : participant?.status === 'concluido'
+                      ? 'Ver conclusão'
+                      : participant
+                        ? 'Continuar levantamento'
+                        : 'Iniciar levantamento'}
                   <ClipboardList className="h-4 w-4" />
                 </button>
               </div>

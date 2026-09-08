@@ -8,6 +8,7 @@ interface Lead {
   id: string
   name: string
   phone: string
+  email: string
   modality: string
   created_at: string
 }
@@ -294,6 +295,15 @@ export function Leads() {
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </Link>
+                      {lead.email && (
+                        <Link
+                          to={`/admin/preview?email=${encodeURIComponent(lead.email)}`}
+                          className="rounded-full border border-teal-600/20 p-1.5 text-teal-600 transition hover:bg-teal-50"
+                          title="Ver como o paciente vê"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
                       <button
                         onClick={() => handleDelete(lead.id, lead.name)}
                         className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50"
@@ -356,6 +366,16 @@ export function Leads() {
                             <Eye className="h-3.5 w-3.5" />
                             Ver
                           </Link>
+                          {lead.email && (
+                            <Link
+                              to={`/admin/preview?email=${encodeURIComponent(lead.email)}`}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-teal-600/20 px-3 py-1.5 text-xs font-medium text-teal-600 transition hover:bg-teal-50"
+                              title="Ver como o paciente vê"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              Área do paciente
+                            </Link>
+                          )}
                           <button
                             onClick={() => handleDelete(lead.id, lead.name)}
                             className="rounded-full border border-red-200 p-1.5 text-red-600 transition hover:bg-red-50 hover:border-red-300"

@@ -233,7 +233,7 @@ export function Permuta() {
         )}
 
         {step === 'quiz' && (
-          <div className="card w-full max-w-lg animate-fade-up">
+          <div className="card w-full max-w-lg p-6 md:p-8 animate-fade-up">
             <div className="mb-6">
               <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-se-violet">
                 Um olhar sobre o seu momento
@@ -294,7 +294,7 @@ export function Permuta() {
         )}
 
         {step === 'result' && (
-          <div className="card w-full max-w-lg text-center animate-fade-up">
+          <div className="card w-full max-w-lg p-6 md:p-8 text-center animate-fade-up">
             <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-se-violet">
               Sua indicação SynaptEssence360®
             </div>

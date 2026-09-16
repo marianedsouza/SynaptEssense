@@ -7,6 +7,7 @@ interface ShareLink {
   description: string
   path: string
   recommended?: boolean
+  tag?: string
 }
 
 const SHARE_LINKS: ShareLink[] = [
@@ -20,6 +21,13 @@ const SHARE_LINKS: ShareLink[] = [
     description: 'Página do protocolo com diagnóstico e modalidades',
     path: '/protocolo',
     recommended: true,
+  },
+  {
+    label: 'Levantamento — Acesso via Permuta',
+    description:
+      'Link exclusivo para criar o ambiente de quem vai fazer permuta ou pagar em dinheiro. Sem Mercado Pago.',
+    path: '/permuta',
+    tag: 'Pagamento combinado',
   },
   {
     label: 'Minha Área',
@@ -97,6 +105,12 @@ export function ShareLinks() {
                 <div className="absolute -top-3 left-6 flex items-center gap-1.5 rounded-full bg-se-violet px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
                   <Sparkles className="h-3 w-3" />
                   Protocolo recomendado
+                </div>
+              )}
+              {link.tag && (
+                <div className="absolute -top-3 left-6 flex items-center gap-1.5 rounded-full bg-se-teal px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
+                  <Sparkles className="h-3 w-3" />
+                  {link.tag}
                 </div>
               )}
 

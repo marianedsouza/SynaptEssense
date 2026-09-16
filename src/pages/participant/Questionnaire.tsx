@@ -80,12 +80,21 @@ export function Questionnaire() {
       let approved = false
       const email = (p.email ?? '').trim().toLowerCase()
       if (email) {
-        const { count, error } = await supabase
-          .from('payments')
-          .select('*', { count: 'exact', head: true })
-          .ilike('payer_email', email)
-          .eq('status', 'approved')
-        approved = !error && (count ?? 0) > 0
+        const [payRes, leadRes] = await Promise.all([
+          supabase
+            .from('payments')
+            .select('*', { count: 'exact', head: true })
+            .ilike('payer_email', email)
+            .eq('status', 'approved'),
+          supabase
+            .from('protocol_leads')
+            .select('*', { count: 'exact', head: true })
+            .ilike('email', email)
+            .eq('payment_mode', 'permuta'),
+        ])
+        approved =
+          (!payRes.error && (payRes.count ?? 0) > 0) ||
+          (!leadRes.error && (leadRes.count ?? 0) > 0)
       }
       setGate(approved ? 'ok' : 'blocked')
       setParticipant(p)

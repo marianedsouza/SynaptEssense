@@ -101,8 +101,11 @@ export interface ProtocolLead {
   name: string
   phone: string
   modality: 'social' | 'integral'
+  payment_mode: 'online' | 'permuta' | null
   created_at: string
 }
+
+export type PaymentMode = 'online' | 'permuta'
 
 export interface Payment {
   id: string

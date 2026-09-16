@@ -13,6 +13,7 @@ import { Questionnaire } from './pages/participant/Questionnaire'
 import { Completion } from './pages/participant/Completion'
 import { Thanks } from './pages/participant/Thanks'
 import { Payment } from './pages/participant/Payment'
+import { Permuta } from './pages/participant/Permuta'
 import { UserArea } from './pages/participant/UserArea'
 import { UserAreaLogin } from './pages/participant/UserAreaLogin'
 import { UserAreaRecover } from './pages/participant/UserAreaRecover'
@@ -112,6 +113,7 @@ function App() {
             <Route path="/concluido" element={<Completion />} />
             <Route path="/obrigado" element={<Thanks />} />
             <Route path="/pagamento" element={<Payment />} />
+            <Route path="/permuta" element={<Permuta />} />
             <Route path="/minha-area/login" element={<UserAreaLogin />} />
             <Route path="/minha-area/recuperar-senha" element={<UserAreaRecover />} />
             <Route path="/minha-area/redefinir-senha" element={<UserAreaReset />} />

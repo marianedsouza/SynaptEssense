@@ -10,6 +10,7 @@ interface Lead {
   phone: string
   email: string
   modality: string
+  payment_mode: string | null
   created_at: string
 }
 
@@ -283,6 +284,11 @@ export function Leads() {
                       {lead.payment && (
                         <PaymentBadge status={lead.payment.status} />
                       )}
+                      {!lead.payment && lead.payment_mode === 'permuta' && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-semibold text-orange-600">
+                          <Sparkles className="h-3 w-3" /> Permuta
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-2 flex items-center justify-between">
@@ -348,6 +354,10 @@ export function Leads() {
                       <td className="px-5 py-3">
                         {lead.payment ? (
                           <PaymentBadge status={lead.payment.status} />
+                        ) : lead.payment_mode === 'permuta' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-semibold text-orange-600">
+                            <Sparkles className="h-3 w-3" /> Permuta
+                          </span>
                         ) : (
                           <span className="text-xs text-ink-muted">—</span>
                         )}

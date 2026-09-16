@@ -26,6 +26,7 @@ interface Lead {
   email: string | null
   modality: 'social' | 'integral'
   plan: 'mensal' | 'completo' | null
+  payment_mode: 'online' | 'permuta' | null
   archetype: string | null
   notas: string | null
   user_id: string | null
@@ -279,6 +280,10 @@ export function LeadDetail() {
             <span className="inline-flex items-center gap-1 rounded-full bg-se-teal/10 px-3 py-1 text-xs font-semibold text-se-teal">
               <CheckCircle2 className="h-3.5 w-3.5" /> Pago
             </span>
+          ) : lead.payment_mode === 'permuta' ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600">
+              <Sparkles className="h-3.5 w-3.5" /> Permuta
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
               <Clock className="h-3.5 w-3.5" /> {lastPayment ? 'Pendente' : 'Sem pagamento'}
@@ -326,6 +331,11 @@ export function LeadDetail() {
           <div className="mt-1 text-xs text-ink-muted">
             {payments.length} pagamento{payments.length === 1 ? '' : 's'} registrado{payments.length === 1 ? '' : 's'}
           </div>
+          {lead.payment_mode === 'permuta' && !isPaid && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-semibold text-orange-600">
+              <Sparkles className="h-3 w-3" /> Pagamento combinado (permuta / dinheiro)
+            </div>
+          )}
         </div>
       </div>
 

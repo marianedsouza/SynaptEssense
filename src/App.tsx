@@ -45,6 +45,9 @@ const TherapistAgenda = lazy(() =>
 const ShareLinks = lazy(() =>
   import('./pages/admin/ShareLinks').then((m) => ({ default: m.ShareLinks })),
 )
+const Materials = lazy(() =>
+  import('./pages/admin/Materials').then((m) => ({ default: m.Materials })),
+)
 
 function Fallback() {
   return (
@@ -148,6 +151,10 @@ function App() {
             <Route
               path="/admin/compartilhar"
               element={<AdminRoute><ShareLinks /></AdminRoute>}
+            />
+            <Route
+              path="/admin/materiais"
+              element={<AdminRoute><Materials /></AdminRoute>}
             />
             <Route
               path="/admin/preview"

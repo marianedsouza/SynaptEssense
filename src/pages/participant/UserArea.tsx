@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Check, ClipboardList, Clock, CreditCard, LogOut, RefreshCw, Shield, X, User, Pencil, Eye, Sparkles } from 'lucide-react'
+import { CalendarDays, Check, ClipboardList, Clock, CreditCard, Download, FileText, Headphones, LogOut, Music2, RefreshCw, Shield, X, User, Pencil, Eye, Sparkles } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
@@ -8,6 +8,7 @@ import { useSettings } from '../../context/SettingsContext'
 import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planDurationMonths, planQualityLabel } from '../../lib/protocol'
 import { fetchSessionsByLead, type SessionRecord } from '../../lib/sessions'
 import { getParticipantByEmail, setSessionId } from '../../lib/participants'
+import { fetchMaterials, materialPublicUrl, type Material } from '../../lib/materials'
 import type { Participant } from '../../lib/types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
@@ -53,6 +54,7 @@ export function UserArea() {
   const [payments, setPayments] = useState<PayRecord[]>([])
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [participant, setParticipant] = useState<Participant | null | undefined>(undefined)
+  const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
 
   const [switchOpen, setSwitchOpen] = useState(false)
@@ -101,6 +103,7 @@ export function UserArea() {
       setSessions(await fetchSessionsByLead(firstLead.id))
     }
     setParticipant(await getParticipantByEmail(email))
+    setMaterials(await fetchMaterials())
     setLoading(false)
   }, [navigate, previewEmail])
 
@@ -227,6 +230,10 @@ export function UserArea() {
   const realized = sessions.filter((s) => s.status === 'realizada').length
   const remaining = Math.max(PROTOCOL_TOTAL_SESSIONS - realized, 0)
   const planMonths = lastLead ? planDurationMonths(lastLead.plan) : 0
+
+  const activeMaterials = materials.filter((m) => m.active)
+  const audios = activeMaterials.filter((m) => m.type === 'audio')
+  const pdfs = activeMaterials.filter((m) => m.type === 'pdf')
 
   const protocolStart = lastLead ? new Date(lastLead.created_at).getTime() : 0
   const protocolEnd = protocolStart ? new Date(protocolStart + planMonths * 30 * 24 * 60 * 60 * 1000) : null
@@ -605,6 +612,64 @@ export function UserArea() {
                         : 'Iniciar levantamento'}
                   <ClipboardList className="h-4 w-4" />
                 </button>
+              </div>
+            )}
+
+            {/* Materials / meditation */}
+            {active && materials.length > 0 && (
+              <div className="card mt-6 p-6 md:p-8">
+                <div className="flex items-center gap-2">
+                  <Headphones className="h-5 w-5 text-se-violet" />
+                  <h2 className="font-display text-lg font-semibold text-ink">Meditação e materiais</h2>
+                </div>
+
+                {audios.length > 0 && (
+                  <div className="mt-5 space-y-4">
+                    {audios.map((m) => (
+                      <div key={m.id} className="rounded-2xl border border-ink/10 bg-se-mist/50 p-4">
+                        <div className="flex items-center gap-2">
+                          <Music2 className="h-4 w-4 shrink-0 text-se-violet" />
+                          <span className="text-sm font-semibold text-ink">{m.title}</span>
+                          {m.duration && (
+                            <span className="rounded-full bg-se-lavender px-2 py-0.5 text-[10px] font-medium text-se-violet">
+                              {m.duration}
+                            </span>
+                          )}
+                        </div>
+                        {m.description && <p className="mt-1 text-xs text-ink-muted">{m.description}</p>}
+                        <audio controls src={materialPublicUrl(m.storage_path)} className="mt-3 w-full" preload="none" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {pdfs.length > 0 && (
+                  <div className={audios.length ? 'mt-6 space-y-2.5' : 'mt-5 space-y-2.5'}>
+                    {pdfs.map((m) => (
+                      <div
+                        key={m.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-se-mist/50 px-4 py-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 shrink-0 text-se-violet" />
+                          <div>
+                            <div className="text-sm font-medium text-ink">{m.title}</div>
+                            {m.description && <div className="text-xs text-ink-muted">{m.description}</div>}
+                          </div>
+                        </div>
+                        <a
+                          href={materialPublicUrl(m.storage_path)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary !px-4 !py-2 text-xs shrink-0"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Abrir PDF
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

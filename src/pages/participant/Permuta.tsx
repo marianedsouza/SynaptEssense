@@ -175,7 +175,7 @@ export function Permuta() {
         throw new Error(`Não foi possível registrar o protocolo: ${accessError.message}`)
       }
 
-      navigate('/minha-area?status=permuta', { replace: true })
+      navigate('/minha-area?status=combinado', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar o acesso.')
       setStep('form')

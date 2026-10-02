@@ -116,7 +116,8 @@ function App() {
             <Route path="/concluido" element={<Completion />} />
             <Route path="/obrigado" element={<Thanks />} />
             <Route path="/pagamento" element={<Payment />} />
-            <Route path="/permuta" element={<Permuta />} />
+            <Route path="/pagamento-combinado" element={<Permuta />} />
+            <Route path="/permuta" element={<Navigate to="/pagamento-combinado" replace />} />
             <Route path="/minha-area/login" element={<UserAreaLogin />} />
             <Route path="/minha-area/recuperar-senha" element={<UserAreaRecover />} />
             <Route path="/minha-area/redefinir-senha" element={<UserAreaReset />} />

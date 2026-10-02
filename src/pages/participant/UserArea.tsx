@@ -323,7 +323,7 @@ export function UserArea() {
             </div>
           </div>
         )}
-        {statusParam === 'permuta' && (
+        {(statusParam === 'combinado' || statusParam === 'permuta') && (
           <div className="mb-6 flex items-start gap-3 rounded-2xl border border-se-violet/30 bg-se-lavender/50 px-5 py-4">
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-se-violet" />
             <div>

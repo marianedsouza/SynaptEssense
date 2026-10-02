@@ -21,9 +21,9 @@ create policy "leads_insert_anon" on public.protocol_leads
   for insert to anon, authenticated with check (true);
 
 -- ============================================================
--- Função: cria o contato do paciente (protocol_leads) + sessões
--- do protocolo (12 encontros semanais) de forma atômica,
--- contornando o RLS da tabela sessions.
+-- Função: cria apenas o contato do paciente (protocol_leads),
+-- contornando o RLS. As sessões/atendimentos NÃO são criados
+-- automaticamente — o administrador agenda cada encontro no painel.
 -- ============================================================
 create or replace function public.create_permuta_access(payload jsonb)
 returns jsonb
@@ -33,10 +33,7 @@ set search_path = public
 as $$
 declare
   new_lead public.protocol_leads;
-  i int;
-  base_date date := current_date;
 begin
-  -- 1) Contato do paciente
   insert into public.protocol_leads (
     name, phone, email, plan, user_id, modality, payment_mode, created_at
   )
@@ -51,13 +48,6 @@ begin
     now()
   )
   returning * into new_lead;
-
-  -- 2) Sessões do protocolo: 12 encontros semanais (status 'agendada')
-  --    O administrador pode ajustar as datas depois no painel.
-  for i in 0..11 loop
-    insert into public.sessions (lead_id, date, status)
-    values (new_lead.id, base_date + (i * 7), 'agendada');
-  end loop;
 
   return to_jsonb(new_lead);
 end;

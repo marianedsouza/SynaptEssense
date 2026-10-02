@@ -28,9 +28,7 @@ const FIELDS_PAYMENT_SOCIAL: { key: string; label: string; description: string }
 ]
 
 const FIELDS_PAYMENT_INTEGRAL: { key: string; label: string; description: string }[] = [
-  { key: 'payment_integral_value_per_session', label: 'Valor por encontro (R$)', description: 'Valor cobrado por cada encontro individual.' },
-  { key: 'payment_integral_monthly', label: 'Plano mensal (R$)', description: 'Valor do plano mensal do protocolo.' },
-  { key: 'payment_integral_complete', label: 'Plano completo (R$)', description: 'Valor total do protocolo completo (12 encontros / 90 dias).' },
+  { key: 'payment_integral_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único da Mentoria Integral — processo completo de 90 dias. Parcelável via Mercado Pago.' },
 ]
 
 export function Settings() {
@@ -410,7 +408,7 @@ export function Settings() {
           <div className="rounded-2xl border border-ink/5 p-5">
             <div className="mb-4 flex items-center gap-2">
               <div className="h-2.5 w-2.5 rounded-full bg-se-violet" />
-              <h3 className="font-display text-lg font-semibold text-ink">Protocolo Integral</h3>
+              <h3 className="font-display text-lg font-semibold text-ink">Mentoria Integral</h3>
             </div>
             <div className="space-y-4">
               {FIELDS_PAYMENT_INTEGRAL.map((field) => (

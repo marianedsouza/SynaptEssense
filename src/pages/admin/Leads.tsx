@@ -348,7 +348,7 @@ export function Leads() {
                       <td className="px-5 py-3 text-ink-soft">{lead.phone}</td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${lead.modality === 'integral' ? 'bg-se-lavender text-se-violet' : 'bg-se-sky text-se-teal'}`}>
-                          {lead.modality === 'integral' ? 'Protocolo Integral' : 'Protocolo Essencial'}
+                          {lead.modality === 'integral' ? 'Mentoria Integral' : 'Protocolo Essencial'}
                         </span>
                       </td>
                       <td className="px-5 py-3">

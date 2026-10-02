@@ -416,9 +416,12 @@ export function Protocol() {
               <div className="mb-3 inline-block rounded-full bg-se-lavender px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-se-violet">
                 Recomendado para momentos decisivos da vida
               </div>
-              <h3 className="font-display text-xl font-semibold text-ink">Protocolo Integral de Reconstrução</h3>
+              <h3 className="font-display text-xl font-semibold text-ink">Modalidade Mentoria Integral</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                Destinado às pessoas que vivem processos de reconstrução pessoal, familiar ou relacional e desejam um acompanhamento mais próximo, estratégico e personalizado durante os 90 dias.
+                Uma jornada de 90 dias com acompanhamento mais próximo, estratégico e
+                personalizado. Para quem vive processos de reconstrução pessoal, familiar
+                ou relacional e deseja uma mentoria dedicada em cada etapa. Não é um pacote
+                de sessões — é um processo completo de transformação com mentoria.
               </p>
               <div className="mt-4 mb-2 text-xs font-medium uppercase tracking-wider text-se-violet">
                 Inclui tudo do Protocolo Essencial e ainda:
@@ -443,22 +446,17 @@ export function Protocol() {
                 ))}
               </div>
               <div className="mt-8 border-t border-ink/5 pt-6">
-                <div className="text-sm text-ink-muted">Valor por encontro</div>
-                <div className="font-display text-2xl font-semibold text-ink">
-                  R${fmtPrice(settings.payment_integral_value_per_session)}
+                <div className="text-sm text-ink-muted">Investimento na jornada completa</div>
+                <div className="font-display text-3xl font-semibold text-ink">
+                  R${fmtPrice(settings.payment_integral_complete)}
                 </div>
-                <div className="mt-2 space-y-1 text-sm text-ink-soft">
-                  <p>Plano mensal: <strong className="text-ink">R${fmtPrice(settings.payment_integral_monthly)}</strong></p>
-                  <p>Plano completo: <strong className="text-ink">R${fmtPrice(settings.payment_integral_complete)}</strong></p>
-                  <p className="text-xs text-ink-muted">Parcelamento via Mercado Pago.</p>
-                </div>
+                <p className="mt-2 text-xs text-ink-muted">
+                  Mentoria completa de 90 dias. Parcelamento via Mercado Pago.
+                </p>
               </div>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button onClick={() => goToPayment('integral', 'mensal')} className="btn-secondary w-full">
-                  Plano mensal
-                </button>
+              <div className="mt-6">
                 <button onClick={() => goToPayment('integral', 'completo')} className="btn-primary w-full">
-                  Plano completo
+                  Iniciar minha mentoria
                 </button>
               </div>
             </div>
@@ -474,15 +472,15 @@ export function Protocol() {
           </h2>
           <div className="mt-10 rounded-3xl border border-ink/5 bg-white p-6 md:p-8">
             <p className="text-sm leading-relaxed text-ink-soft">
-              A metodologia é exatamente a mesma. Os encontros possuem a mesma duração. O diferencial da modalidade Integral está na <strong className="text-ink">profundidade do acompanhamento</strong>, personalização, suporte entre sessões e construção estratégica do processo.
+              A metodologia é exatamente a mesma e ambas são jornadas completas de 90 dias. O diferencial da Mentoria Integral está na <strong className="text-ink">profundidade do acompanhamento</strong>, personalização, suporte ao longo do processo e construção estratégica da jornada.
             </p>
             <div className="mt-6 overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-ink/5">
                     <th className="pb-3 pr-4 font-medium text-ink-muted"></th>
-                    <th className="pb-3 pr-4 font-medium text-ink">Social</th>
-                    <th className="pb-3 font-medium text-se-violet">Integral</th>
+                    <th className="pb-3 pr-4 font-medium text-ink">Essencial</th>
+                    <th className="pb-3 font-medium text-se-violet">Mentoria</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink/5">
@@ -694,7 +692,7 @@ export function Protocol() {
                         Ver Protocolo Essencial
                       </button>
                       <button onClick={() => scrollToModalities('integral')} className="btn-primary text-sm py-3">
-                        Conhecer Protocolo Integral
+                        Conhecer Mentoria Integral
                       </button>
                     </div>
                   </div>
@@ -703,10 +701,10 @@ export function Protocol() {
                 {recommendation === 'integral' && (
                   <div className="mt-6">
                     <div className="inline-block rounded-full bg-se-violet/10 px-5 py-2 text-sm font-semibold text-se-violet">
-                      Protocolo Integral de Reconstrução
+                      Modalidade Mentoria Integral
                     </div>
                     <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-                      Pelas características do momento que você descreveu, o Protocolo Integral de Reconstrução parece fazer mais sentido para sua jornada atual.
+                      Pelas características do momento que você descreveu, a Mentoria Integral parece fazer mais sentido para sua jornada atual.
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-ink-muted">
                       Suas respostas indicam um momento que pode se beneficiar de maior proximidade, personalização e suporte estratégico durante os 90 dias.

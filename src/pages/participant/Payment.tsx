@@ -14,7 +14,7 @@ type PlanType = 'mensal' | 'completo'
 
 const MODALITY_LABELS: Record<ModalityType, string> = {
   social: 'Modalidade Protocolo Essencial',
-  integral: 'Protocolo Integral de Reconstrução',
+  integral: 'Modalidade Mentoria Integral',
 }
 
 export function Payment() {

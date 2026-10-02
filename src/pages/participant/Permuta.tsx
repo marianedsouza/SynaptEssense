@@ -71,7 +71,7 @@ type PlanType = 'mensal' | 'completo'
 
 const MODALITY_LABELS: Record<ModalityType, string> = {
   social: 'Modalidade Protocolo Essencial',
-  integral: 'Protocolo Integral de Reconstrução',
+  integral: 'Modalidade Mentoria Integral',
 }
 
 function fmtPrice(value?: string) {
@@ -326,10 +326,10 @@ export function Permuta() {
             {recommendation === 'integral' && (
               <>
                 <div className="mt-5 inline-block rounded-full bg-se-violet/10 px-5 py-2 text-sm font-semibold text-se-violet">
-                  Protocolo Integral de Reconstrução
+                  Modalidade Mentoria Integral
                 </div>
                 <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-                  Pelas características do momento que você descreveu, o Protocolo
+                  Pelas características do momento que você descreveu, a Mentoria
                   Integral parece fazer mais sentido para sua jornada atual.
                 </p>
               </>
@@ -361,7 +361,7 @@ export function Permuta() {
               {(['social', 'integral'] as const).map((m) => (
                 <button
                   key={m}
-                  onClick={() => { setModality(m); if (m === 'social') setPlan('completo') }}
+                  onClick={() => { setModality(m); setPlan('completo') }}
                   className={`card relative p-6 text-left transition-all ${
                     modality === m ? 'border-se-violet bg-se-lavender/30 ring-2 ring-se-violet' : 'border-ink/10'
                   }`}
@@ -369,18 +369,11 @@ export function Permuta() {
                   <h3 className="font-display text-lg font-semibold text-ink">{MODALITY_LABELS[m]}</h3>
                   <p className="mt-1 text-xs text-ink-muted">
                     {m === 'social'
-                      ? '12 encontros • metodologia completa • reavaliação final'
-                      : 'Tudo da Social + acompanhamento estratégico, suporte via WhatsApp e caderno de regeneração.'}
+                      ? 'Jornada completa de 90 dias • metodologia completa • reavaliação final'
+                      : 'Tudo do Essencial + mentoria dedicada, suporte via WhatsApp e caderno de regeneração.'}
                   </p>
                   <div className="mt-4 space-y-1 text-sm text-ink-soft">
-                    {m === 'social' ? (
-                      <p>Jornada completa: <strong className="text-ink">R${fmtPrice(settings.payment_social_complete)}</strong></p>
-                    ) : (
-                      <>
-                        <p>Plano mensal: <strong className="text-ink">R${fmtPrice(settings.payment_integral_monthly)}</strong></p>
-                        <p>Plano completo: <strong className="text-ink">R${fmtPrice(settings.payment_integral_complete)}</strong></p>
-                      </>
-                    )}
+                    <p>Jornada completa: <strong className="text-ink">R${fmtPrice(m === 'social' ? settings.payment_social_complete : settings.payment_integral_complete)}</strong></p>
                   </div>
                   <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-se-violet">
                     <span className={`grid h-4 w-4 place-items-center rounded-full border-2 ${modality === m ? 'border-se-violet' : 'border-ink/20'}`}>
@@ -392,29 +385,7 @@ export function Permuta() {
               ))}
             </div>
 
-            {modality === 'integral' && (
-              <div className="card mt-4 p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Plano</div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {(['mensal', 'completo'] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPlan(p)}
-                      className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${
-                        plan === p ? 'border-se-violet bg-se-lavender/40' : 'border-ink/10 bg-white hover:border-se-violet/30'
-                      }`}
-                    >
-                      <span className={`font-semibold ${plan === p ? 'text-se-violet-dark' : 'text-ink'}`}>
-                        {p === 'mensal' ? 'Plano mensal' : 'Plano completo'}
-                      </span>
-                      <span className="mt-0.5 block text-xs text-ink-muted">
-                        {p === 'mensal' ? '1 mês de acompanhamento' : '3 meses • valor completo'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+
 
             <button onClick={goToForm} className="btn-primary mt-6 w-full">
               Criar meu acesso
@@ -444,7 +415,7 @@ export function Permuta() {
                   Resumo da escolha
                 </div>
                 <div className="mt-2 font-medium text-ink">
-                  {MODALITY_LABELS[modality]} • {plan === 'mensal' ? 'Plano mensal' : 'Plano completo'}
+                  {MODALITY_LABELS[modality]} • Jornada completa de 90 dias
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-se-violet">
                   <Sparkles className="h-3.5 w-3.5" />

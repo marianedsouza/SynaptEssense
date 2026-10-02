@@ -517,7 +517,7 @@ export function LeadDetail() {
               <label className="label">Modalidade</label>
               <select className="input" value={editModality} onChange={(e) => setEditModality(e.target.value as 'social' | 'integral')}>
                 <option value="social">Modalidade Protocolo Essencial</option>
-                <option value="integral">Protocolo Integral de Reconstrução</option>
+                <option value="integral">Modalidade Mentoria Integral</option>
               </select>
             </div>
             <div>

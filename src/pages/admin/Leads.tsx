@@ -286,7 +286,7 @@ export function Leads() {
                       )}
                       {!lead.payment && lead.payment_mode === 'permuta' && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-semibold text-orange-600">
-                          <Sparkles className="h-3 w-3" /> Permuta
+                          <Sparkles className="h-3 w-3" /> Pagamento combinado
                         </span>
                       )}
                     </div>
@@ -356,7 +356,7 @@ export function Leads() {
                           <PaymentBadge status={lead.payment.status} />
                         ) : lead.payment_mode === 'permuta' ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-semibold text-orange-600">
-                            <Sparkles className="h-3 w-3" /> Permuta
+                            <Sparkles className="h-3 w-3" /> Pagamento combinado
                           </span>
                         ) : (
                           <span className="text-xs text-ink-muted">—</span>

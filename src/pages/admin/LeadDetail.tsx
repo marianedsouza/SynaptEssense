@@ -282,7 +282,7 @@ export function LeadDetail() {
             </span>
           ) : lead.payment_mode === 'permuta' ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600">
-              <Sparkles className="h-3.5 w-3.5" /> Permuta
+              <Sparkles className="h-3.5 w-3.5" /> Pagamento combinado
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
@@ -333,7 +333,7 @@ export function LeadDetail() {
           </div>
           {lead.payment_mode === 'permuta' && !isPaid && (
             <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-[10px] font-semibold text-orange-600">
-              <Sparkles className="h-3 w-3" /> Pagamento combinado (permuta / dinheiro)
+              <Sparkles className="h-3 w-3" /> Pagamento combinado com a analista
             </div>
           )}
         </div>

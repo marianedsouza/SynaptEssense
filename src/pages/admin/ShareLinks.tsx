@@ -23,9 +23,9 @@ const SHARE_LINKS: ShareLink[] = [
     recommended: true,
   },
   {
-    label: 'Levantamento — Acesso via Permuta',
+    label: 'Levantamento — Pagamento combinado',
     description:
-      'Link exclusivo para criar o ambiente de quem vai fazer permuta ou pagar em dinheiro. Sem Mercado Pago.',
+      'Link exclusivo para criar o ambiente de quem vai combinar o pagamento diretamente com a analista. Sem Mercado Pago.',
     path: '/permuta',
     tag: 'Pagamento combinado',
   },

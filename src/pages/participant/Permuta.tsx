@@ -209,6 +209,24 @@ export function Permuta() {
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center px-6 pb-20 pt-4 md:pt-10">
+        {settings.combined_payment_enabled === 'false' ? (
+          <div className="card w-full max-w-md p-8 text-center animate-fade-up">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-se-lavender">
+              <Lock className="h-7 w-7 text-se-violet" />
+            </div>
+            <h1 className="mt-6 font-display text-2xl font-semibold text-ink">
+              Acesso temporariamente indisponível
+            </h1>
+            <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+              Este link de acesso não está liberado neste momento. Fale com sua
+              analista para combinar o início da sua jornada.
+            </p>
+            <button onClick={() => navigate('/')} className="btn-secondary mt-6">
+              Voltar ao início
+            </button>
+          </div>
+        ) : (
+        <>
         {step === 'intro' && (
           <div className="w-full text-center animate-fade-up">
             <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-se-violet/20 bg-white/70 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-se-violet backdrop-blur">
@@ -219,8 +237,8 @@ export function Permuta() {
               Seu protocolo começa aqui.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink-soft">
-              Este acesso foi preparado para quem vai combinar o pagamento do
-              protocolo diretamente com a analista, por permuta ou em dinheiro.
+              Este acesso foi preparado para quem vai combinar o pagamento da
+              jornada diretamente com a analista.
             </p>
             <p className="mx-auto mt-3 max-w-xl text-sm text-ink-muted">
               Você responderá algumas perguntas para indicarmos a modalidade mais
@@ -419,7 +437,7 @@ export function Permuta() {
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-se-violet">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Pagamento combinado: Permuta / Dinheiro
+                  Pagamento combinado com a analista
                 </div>
               </div>
 
@@ -533,6 +551,8 @@ export function Permuta() {
             <Check className="h-3.5 w-3.5" />
             Sem pagamento online — o valor será combinado com a analista.
           </div>
+        )}
+        </>
         )}
       </main>
 

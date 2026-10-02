@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   payment_integral_value_per_session: '',
   payment_integral_monthly: '',
   payment_integral_complete: '5300.00',
+  combined_payment_enabled: 'true',
 }
 
 export function getDefaultAnalystProfile(): AnalystProfile {

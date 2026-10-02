@@ -329,7 +329,7 @@ export function UserArea() {
             <div>
               <div className="text-sm font-semibold text-ink">Seu ambiente foi criado!</div>
               <p className="mt-1 text-sm text-ink-soft">
-                Seu protocolo está liberado. O pagamento combinado (permuta ou dinheiro)
+                Seu protocolo está liberado. O pagamento combinado
                 será alinhado diretamente com sua analista — sem pagamento online.
               </p>
             </div>
@@ -366,7 +366,7 @@ export function UserArea() {
                   </span>
                 ) : isPermuta ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600">
-                    <Sparkles className="h-3.5 w-3.5" /> Permuta
+                    <Sparkles className="h-3.5 w-3.5" /> Pagamento combinado
                   </span>
                 ) : hasPending ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
@@ -417,7 +417,7 @@ export function UserArea() {
                 {isPermuta && !isPaid && (
                   <span className="inline-flex items-center gap-1.5 self-end rounded-full bg-orange-50 px-3 py-1 text-xs font-medium text-orange-600">
                     <Sparkles className="h-3.5 w-3.5" />
-                    Pagamento combinado: Permuta / Dinheiro
+                    Pagamento combinado com a analista
                   </span>
                 )}
                 {!active && !isPreview && (
@@ -681,7 +681,7 @@ export function UserArea() {
               {isPermuta && totalPaid === 0 && (
                 <p className="mt-4 flex items-center gap-1.5 text-xs text-ink-muted">
                   <Sparkles className="h-3.5 w-3.5 text-orange-500" />
-                  Pagamento combinado com a analista (permuta ou dinheiro). Nenhum valor registrado online.
+                  Pagamento combinado com a analista. Nenhum valor registrado online.
                 </p>
               )}
 

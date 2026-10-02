@@ -14,6 +14,7 @@ import {
   deleteMaterialFile,
   fetchMaterials,
   materialPublicUrl,
+  setMaterialVisibility,
   uploadMaterial,
   type Material,
 } from '../../lib/materials'
@@ -37,6 +38,7 @@ function fmtDate(iso: string) {
 
 export function Materials() {
   const [materials, setMaterials] = useState<Material[]>([])
+  const [patients, setPatients] = useState<{ id: string; name: string; email: string | null }[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
 
@@ -51,8 +53,26 @@ export function Materials() {
 
   const load = useCallback(async () => {
     setMaterials(await fetchMaterials())
+    try {
+      const { data } = await supabase
+        .from('protocol_leads')
+        .select('id, name, email')
+        .order('created_at', { ascending: false })
+      setPatients(data ?? [])
+    } catch {
+      setPatients([])
+    }
     setLoading(false)
   }, [])
+
+  async function handleVisibilityChange(material: Material, leadId: string, checked: boolean) {
+    const current = material.visible_to ?? []
+    const next = checked
+      ? Array.from(new Set([...current, leadId]))
+      : current.filter((id) => id !== leadId)
+    await setMaterialVisibility(material.id, next)
+    await load()
+  }
 
   useEffect(() => {
     load()
@@ -351,8 +371,10 @@ export function Materials() {
                   <MaterialRow
                     key={m.id}
                     material={m}
+                    patients={patients}
                     onDelete={() => handleDelete(m)}
                     onToggle={() => handleToggleActive(m)}
+                    onVisibilityChange={(leadId, checked) => handleVisibilityChange(m, leadId, checked)}
                   />
                 ))}
               </div>
@@ -400,8 +422,10 @@ export function Materials() {
                   <MaterialRow
                     key={m.id}
                     material={m}
+                    patients={patients}
                     onDelete={() => handleDelete(m)}
                     onToggle={() => handleToggleActive(m)}
+                    onVisibilityChange={(leadId, checked) => handleVisibilityChange(m, leadId, checked)}
                   />
                 ))}
               </div>
@@ -415,20 +439,29 @@ export function Materials() {
 
 function MaterialRow({
   material,
+  patients,
   onDelete,
   onToggle,
+  onVisibilityChange,
 }: {
   material: Material
+  patients: { id: string; name: string; email: string | null }[]
   onDelete: () => void
   onToggle: () => void
+  onVisibilityChange: (leadId: string, checked: boolean) => void
 }) {
   const url = materialPublicUrl(material.storage_path)
   const Icon = material.type === 'audio' ? AudioLines : FileText
+  const visibleTo = material.visible_to ?? []
+  const visibleNames = patients
+    .filter((p) => visibleTo.includes(p.id))
+    .map((p) => p.name)
 
   return (
+    <div className="rounded-2xl border border-ink/10">
     <div
-      className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center ${
-        material.active ? 'border-ink/10 bg-se-mist/50' : 'border-ink/10 bg-ink/5 opacity-70'
+      className={`flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center ${
+        material.active ? 'bg-se-mist/50' : 'bg-ink/5'
       }`}
     >
       {material.type === 'audio' ? (
@@ -487,6 +520,41 @@ function MaterialRow({
         {fmtDate(material.created_at)}
         {material.file_size ? ` • ${fmtSize(material.file_size)}` : ''}
       </div>
+    </div>
+
+      {!material.active && (
+        <div className="border-t border-ink/10 px-4 py-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-se-violet">
+            Liberar para pacientes específicos
+          </div>
+          <p className="mt-1 text-xs text-ink-muted">
+            {visibleNames.length > 0
+              ? `Visível para: ${visibleNames.join(', ')}`
+              : 'Oculto para todos. Marque abaixo quem pode ver este material.'}
+          </p>
+          <div className="mt-2 max-h-44 space-y-0.5 overflow-y-auto">
+            {patients.length === 0 ? (
+              <p className="text-xs text-ink-muted">Nenhum paciente cadastrado ainda.</p>
+            ) : (
+              patients.map((p) => (
+                <label
+                  key={p.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition hover:bg-se-mist"
+                >
+                  <input
+                    type="checkbox"
+                    checked={visibleTo.includes(p.id)}
+                    onChange={(e) => onVisibilityChange(p.id, e.target.checked)}
+                    className="h-4 w-4 rounded border-ink/20 text-se-violet focus:ring-se-violet/30"
+                  />
+                  <span className="text-ink">{p.name}</span>
+                  {p.email && <span className="text-xs text-ink-muted">· {p.email}</span>}
+                </label>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

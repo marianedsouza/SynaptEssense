@@ -12,8 +12,16 @@ export interface Material {
   file_name: string
   file_size: number | null
   active: boolean
+  visible_to: string[] | null
   created_at: string
   updated_at: string
+}
+
+export async function setMaterialVisibility(
+  id: string,
+  leadIds: string[],
+): Promise<void> {
+  await supabase.from('materials').update({ visible_to: leadIds }).eq('id', id)
 }
 
 export async function fetchMaterials(): Promise<Material[]> {

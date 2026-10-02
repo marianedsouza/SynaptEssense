@@ -231,7 +231,10 @@ export function UserArea() {
   const remaining = Math.max(PROTOCOL_TOTAL_SESSIONS - realized, 0)
   const planMonths = lastLead ? planDurationMonths(lastLead.plan) : 0
 
-  const activeMaterials = materials.filter((m) => m.active)
+  const myLeadIds = leads.map((l) => l.id)
+  const activeMaterials = materials.filter(
+    (m) => m.active || (m.visible_to ?? []).some((id) => myLeadIds.includes(id)),
+  )
   const audios = activeMaterials.filter((m) => m.type === 'audio')
   const pdfs = activeMaterials.filter((m) => m.type === 'pdf')
 
@@ -595,7 +598,7 @@ export function UserArea() {
             )}
 
             {/* Materials / meditation */}
-            {active && materials.length > 0 && (
+            {active && activeMaterials.length > 0 && (
               <div className="card mt-6 p-6 md:p-8">
                 <div className="flex items-center gap-2">
                   <Headphones className="h-5 w-5 text-se-violet" />

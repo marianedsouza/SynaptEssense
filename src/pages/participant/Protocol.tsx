@@ -363,24 +363,26 @@ export function Protocol() {
             Escolha sua modalidade de acompanhamento
           </h2>
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            {/* Modalidade Social */}
+            {/* Modalidade Protocolo Essencial */}
             <div className={`card relative p-8 transition-all duration-500 ${highlightedCard === 'social' ? 'ring-2 ring-se-teal shadow-lift' : ''}`}>
               {highlightedCard === 'social' && (
                 <div className="absolute -top-3 left-6 rounded-full bg-se-teal px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
                   Indicada para o seu momento
                 </div>
               )}
-              <h3 className="font-display text-xl font-semibold text-ink">Modalidade Social</h3>
+              <h3 className="font-display text-xl font-semibold text-ink">Modalidade Protocolo Essencial</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                Criada para ampliar o acesso ao Protocolo de Resgate de Identidade.
+                Uma jornada estruturada de 90 dias para reconstruir sua identidade,
+                seu posicionamento e sua coerência. Não é um pacote de sessões — é
+                um processo completo de transformação.
               </p>
               <div className="mt-6 space-y-2">
                 {[
-                  '12 encontros individuais',
-                  '1 encontro semanal',
-                  'Aplicação completa da metodologia SynaptEssence360®',
-                  'Exercícios entre encontros',
-                  'Reavaliação ao final do processo',
+                  'Jornada completa de 90 dias',
+                  '12 encontros individuais ao longo do processo',
+                  'Aplicação integral da metodologia SynaptEssence360®',
+                  'Exercícios de integração entre os encontros',
+                  'Reavaliação e devolutiva ao final da jornada',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-se-teal" />
@@ -389,22 +391,17 @@ export function Protocol() {
                 ))}
               </div>
               <div className="mt-8 border-t border-ink/5 pt-6">
-                <div className="text-sm text-ink-muted">Valor por encontro</div>
-                <div className="font-display text-2xl font-semibold text-ink">
-                  R${fmtPrice(settings.payment_social_value_per_session)}
+                <div className="text-sm text-ink-muted">Investimento na jornada completa</div>
+                <div className="font-display text-3xl font-semibold text-ink">
+                  R${fmtPrice(settings.payment_social_complete)}
                 </div>
-                <div className="mt-2 space-y-1 text-sm text-ink-soft">
-                  <p>Plano mensal: <strong className="text-ink">R${fmtPrice(settings.payment_social_monthly)}</strong></p>
-                  <p>Plano completo: <strong className="text-ink">R${fmtPrice(settings.payment_social_complete)}</strong></p>
-                  <p className="text-xs text-ink-muted">Parcelamento via Mercado Pago.</p>
-                </div>
+                <p className="mt-2 text-xs text-ink-muted">
+                  Protocolo completo de 90 dias. Parcelamento via Mercado Pago.
+                </p>
               </div>
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <button onClick={() => goToPayment('social', 'mensal')} className="btn-secondary w-full">
-                  Plano mensal
-                </button>
+              <div className="mt-6">
                 <button onClick={() => goToPayment('social', 'completo')} className="btn-primary w-full">
-                  Plano completo
+                  Iniciar minha jornada
                 </button>
               </div>
             </div>
@@ -424,7 +421,7 @@ export function Protocol() {
                 Destinado às pessoas que vivem processos de reconstrução pessoal, familiar ou relacional e desejam um acompanhamento mais próximo, estratégico e personalizado durante os 90 dias.
               </p>
               <div className="mt-4 mb-2 text-xs font-medium uppercase tracking-wider text-se-violet">
-                Inclui tudo da Modalidade Social e ainda:
+                Inclui tudo do Protocolo Essencial e ainda:
               </div>
               <div className="space-y-2">
                 {[
@@ -670,16 +667,16 @@ export function Protocol() {
                 {recommendation === 'social' && (
                   <div className="mt-6">
                     <div className="inline-block rounded-full bg-se-teal/10 px-5 py-2 text-sm font-semibold text-se-teal">
-                      Modalidade Social
+                      Modalidade Protocolo Essencial
                     </div>
                     <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-                      Pelo que você compartilhou, a Modalidade Social parece oferecer uma estrutura adequada para o momento que está vivendo.
+                      Pelo que você compartilhou, o Protocolo Essencial parece oferecer a estrutura adequada para a jornada que está vivendo.
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-ink-muted">
                       Ela proporciona o acompanhamento necessário para desenvolver consciência, novas perspectivas e práticas de transformação ao longo dos 90 dias, com a metodologia SynaptEssence360®.
                     </p>
                     <button onClick={() => scrollToModalities('social')} className="btn-primary mt-6">
-                      Conhecer a Modalidade Social <ArrowRight className="h-4 w-4" />
+                      Conhecer o Protocolo Essencial <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -694,7 +691,7 @@ export function Protocol() {
                     </p>
                     <div className="mt-6 grid gap-3 sm:grid-cols-2">
                       <button onClick={() => scrollToModalities('social')} className="btn-secondary text-sm py-3">
-                        Ver Modalidade Social
+                        Ver Protocolo Essencial
                       </button>
                       <button onClick={() => scrollToModalities('integral')} className="btn-primary text-sm py-3">
                         Conhecer Protocolo Integral

@@ -13,7 +13,7 @@ type ModalityType = 'social' | 'integral'
 type PlanType = 'mensal' | 'completo'
 
 const MODALITY_LABELS: Record<ModalityType, string> = {
-  social: 'Modalidade Social',
+  social: 'Modalidade Protocolo Essencial',
   integral: 'Protocolo Integral de Reconstrução',
 }
 

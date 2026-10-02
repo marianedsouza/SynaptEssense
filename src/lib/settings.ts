@@ -13,9 +13,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   institutional_text:
     'A SynaptEssence360® foi concebida para organizar diferentes dimensões da experiência humana em uma leitura estratégica de desenvolvimento.',
   privacy_email: 'contato@synaptessence.com.br',
-  payment_social_value_per_session: '150.00',
-  payment_social_monthly: '600.00',
-  payment_social_complete: '1800.00',
+  payment_social_value_per_session: '',
+  payment_social_monthly: '',
+  payment_social_complete: '3500.00',
   payment_integral_value_per_session: '350.00',
   payment_integral_monthly: '1400.00',
   payment_integral_complete: '4200.00',

@@ -7,7 +7,7 @@ export const PLAN_MONTHS: Record<'mensal' | 'completo', number> = {
 }
 
 export const MODALITY_LABELS: Record<'social' | 'integral', string> = {
-  social: 'Modalidade Social',
+  social: 'Modalidade Protocolo Essencial',
   integral: 'Protocolo Integral de Reconstrução',
 }
 

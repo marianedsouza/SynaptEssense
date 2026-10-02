@@ -70,7 +70,7 @@ type ModalityType = 'social' | 'integral'
 type PlanType = 'mensal' | 'completo'
 
 const MODALITY_LABELS: Record<ModalityType, string> = {
-  social: 'Modalidade Social',
+  social: 'Modalidade Protocolo Essencial',
   integral: 'Protocolo Integral de Reconstrução',
 }
 
@@ -304,11 +304,11 @@ export function Permuta() {
             {recommendation === 'social' && (
               <>
                 <div className="mt-5 inline-block rounded-full bg-se-teal/10 px-5 py-2 text-sm font-semibold text-se-teal">
-                  Modalidade Social
+                  Modalidade Protocolo Essencial
                 </div>
                 <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-                  Pelo que você compartilhou, a Modalidade Social parece oferecer uma
-                  estrutura adequada para o momento que está vivendo.
+                  Pelo que você compartilhou, o Protocolo Essencial parece oferecer a
+                  estrutura adequada para a jornada que está vivendo.
                 </p>
               </>
             )}
@@ -361,7 +361,7 @@ export function Permuta() {
               {(['social', 'integral'] as const).map((m) => (
                 <button
                   key={m}
-                  onClick={() => setModality(m)}
+                  onClick={() => { setModality(m); if (m === 'social') setPlan('completo') }}
                   className={`card relative p-6 text-left transition-all ${
                     modality === m ? 'border-se-violet bg-se-lavender/30 ring-2 ring-se-violet' : 'border-ink/10'
                   }`}
@@ -373,8 +373,14 @@ export function Permuta() {
                       : 'Tudo da Social + acompanhamento estratégico, suporte via WhatsApp e caderno de regeneração.'}
                   </p>
                   <div className="mt-4 space-y-1 text-sm text-ink-soft">
-                    <p>Plano mensal: <strong className="text-ink">R${fmtPrice(m === 'social' ? settings.payment_social_monthly : settings.payment_integral_monthly)}</strong></p>
-                    <p>Plano completo: <strong className="text-ink">R${fmtPrice(m === 'social' ? settings.payment_social_complete : settings.payment_integral_complete)}</strong></p>
+                    {m === 'social' ? (
+                      <p>Jornada completa: <strong className="text-ink">R${fmtPrice(settings.payment_social_complete)}</strong></p>
+                    ) : (
+                      <>
+                        <p>Plano mensal: <strong className="text-ink">R${fmtPrice(settings.payment_integral_monthly)}</strong></p>
+                        <p>Plano completo: <strong className="text-ink">R${fmtPrice(settings.payment_integral_complete)}</strong></p>
+                      </>
+                    )}
                   </div>
                   <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-se-violet">
                     <span className={`grid h-4 w-4 place-items-center rounded-full border-2 ${modality === m ? 'border-se-violet' : 'border-ink/20'}`}>
@@ -386,27 +392,29 @@ export function Permuta() {
               ))}
             </div>
 
-            <div className="card mt-4 p-5">
-              <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Plano</div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                {(['mensal', 'completo'] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPlan(p)}
-                    className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${
-                      plan === p ? 'border-se-violet bg-se-lavender/40' : 'border-ink/10 bg-white hover:border-se-violet/30'
-                    }`}
-                  >
-                    <span className={`font-semibold ${plan === p ? 'text-se-violet-dark' : 'text-ink'}`}>
-                      {p === 'mensal' ? 'Plano mensal' : 'Plano completo'}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-ink-muted">
-                      {p === 'mensal' ? '1 mês de acompanhamento' : '3 meses • valor completo'}
-                    </span>
-                  </button>
-                ))}
+            {modality === 'integral' && (
+              <div className="card mt-4 p-5">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-ink-muted">Plano</div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {(['mensal', 'completo'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPlan(p)}
+                      className={`rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                        plan === p ? 'border-se-violet bg-se-lavender/40' : 'border-ink/10 bg-white hover:border-se-violet/30'
+                      }`}
+                    >
+                      <span className={`font-semibold ${plan === p ? 'text-se-violet-dark' : 'text-ink'}`}>
+                        {p === 'mensal' ? 'Plano mensal' : 'Plano completo'}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-ink-muted">
+                        {p === 'mensal' ? '1 mês de acompanhamento' : '3 meses • valor completo'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <button onClick={goToForm} className="btn-primary mt-6 w-full">
               Criar meu acesso

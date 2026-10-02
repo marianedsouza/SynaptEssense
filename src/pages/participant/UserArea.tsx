@@ -467,7 +467,7 @@ export function UserArea() {
                       value={switchModality}
                       onChange={(e) => setSwitchModality(e.target.value as 'social' | 'integral')}
                     >
-                      <option value="social">Modalidade Social</option>
+                      <option value="social">Modalidade Protocolo Essencial</option>
                       <option value="integral">Protocolo Integral de Reconstrução</option>
                     </select>
                   </div>
@@ -551,26 +551,38 @@ export function UserArea() {
               </div>
 
               {/* Values of the chosen protocol */}
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-ink/5 p-3 text-center">
-                  <div className="text-[11px] text-ink-muted">Valor por encontro</div>
-                  <div className="mt-1 font-display text-lg font-semibold text-ink">
-                    R${fmtCurrency(parseFloat(pricePerSession || '0')).replace('R$ ', '')}
+              {lastLead?.modality === 'social' ? (
+                <div className="mt-6">
+                  <div className="rounded-xl border border-ink/5 p-4 text-center">
+                    <div className="text-[11px] text-ink-muted">Investimento na jornada completa</div>
+                    <div className="mt-1 font-display text-2xl font-semibold text-ink">
+                      R${fmtCurrency(parseFloat(priceComplete || '0')).replace('R$ ', '')}
+                    </div>
+                    <div className="mt-1 text-[11px] text-ink-muted">Protocolo de 90 dias • parcelável via Mercado Pago</div>
                   </div>
                 </div>
-                <div className="rounded-xl border border-ink/5 p-3 text-center">
-                  <div className="text-[11px] text-ink-muted">Plano mensal</div>
-                  <div className="mt-1 font-display text-lg font-semibold text-ink">
-                    R${fmtCurrency(parseFloat(priceMonthly || '0')).replace('R$ ', '')}
+              ) : (
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-ink/5 p-3 text-center">
+                    <div className="text-[11px] text-ink-muted">Valor por encontro</div>
+                    <div className="mt-1 font-display text-lg font-semibold text-ink">
+                      R${fmtCurrency(parseFloat(pricePerSession || '0')).replace('R$ ', '')}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-ink/5 p-3 text-center">
+                    <div className="text-[11px] text-ink-muted">Plano mensal</div>
+                    <div className="mt-1 font-display text-lg font-semibold text-ink">
+                      R${fmtCurrency(parseFloat(priceMonthly || '0')).replace('R$ ', '')}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-ink/5 p-3 text-center">
+                    <div className="text-[11px] text-ink-muted">Plano completo</div>
+                    <div className="mt-1 font-display text-lg font-semibold text-ink">
+                      R${fmtCurrency(parseFloat(priceComplete || '0')).replace('R$ ', '')}
+                    </div>
                   </div>
                 </div>
-                <div className="rounded-xl border border-ink/5 p-3 text-center">
-                  <div className="text-[11px] text-ink-muted">Plano completo</div>
-                  <div className="mt-1 font-display text-lg font-semibold text-ink">
-                    R${fmtCurrency(parseFloat(priceComplete || '0')).replace('R$ ', '')}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Levantamento */}

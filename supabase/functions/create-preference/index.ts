@@ -23,7 +23,7 @@ serve(async (req) => {
     const origin = req.headers.get("x-site-url") || Deno.env.get("SITE_URL") || ""
 
     const modalityLabel =
-      modalidade === "social" ? "Modalidade Social" : "Protocolo Integral de Reconstrução"
+      modalidade === "social" ? "Modalidade Protocolo Essencial" : "Protocolo Integral de Reconstrução"
     const planLabel = plan === "mensal" ? "Plano Mensal" : "Plano Completo"
 
     const preferenceBody: Record<string, unknown> = {

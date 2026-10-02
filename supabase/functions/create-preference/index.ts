@@ -22,6 +22,11 @@ serve(async (req) => {
 
     const origin = req.headers.get("x-site-url") || Deno.env.get("SITE_URL") || ""
 
+    // O Mercado Pago só aceita auto_return / notification_url com URL pública (https).
+    // Em localhost (http) esses campos quebram a criação da preferência, então
+    // são incluídos apenas quando a origem é https.
+    const isPublicHttps = origin.startsWith("https://")
+
     const modalityLabel =
       modalidade === "social" ? "Modalidade Protocolo Essencial" : "Modalidade Mentoria Integral"
     const planLabel = plan === "mensal" ? "Plano Mensal" : "Plano Completo"
@@ -43,13 +48,6 @@ serve(async (req) => {
       payment_methods: {
         installments: 10,
       },
-      back_urls: {
-        success: `${origin}/minha-area?status=approved`,
-        pending: `${origin}/minha-area?status=pending`,
-        failure: `${origin}/minha-area?status=failure`,
-      },
-      auto_return: "approved",
-      notification_url: `${origin}/api/mercadopago-webhook`,
       statement_descriptor: "SYNAPTESSENCE360",
       metadata: {
         modality: modalidade,
@@ -57,6 +55,21 @@ serve(async (req) => {
         lead_id: lead_id || "",
         user_id: user_id || "",
       },
+    }
+
+    // back_urls só com uma origem válida
+    if (origin) {
+      preferenceBody.back_urls = {
+        success: `${origin}/minha-area?status=approved`,
+        pending: `${origin}/minha-area?status=pending`,
+        failure: `${origin}/minha-area?status=failure`,
+      }
+    }
+
+    // auto_return e notification_url exigem URL pública https
+    if (isPublicHttps) {
+      preferenceBody.auto_return = "approved"
+      preferenceBody.notification_url = `${origin}/api/mercadopago-webhook`
     }
 
     const mpResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {

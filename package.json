@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "seed": "node scripts/generate-seed.mjs"
+    "seed": "node scripts/generate-seed.mjs",
+    "test:patient": "node scripts/test-patient-flow.mjs"
   },
   "dependencies": {
     "@mercadopago/sdk-react": "^1.0.7",

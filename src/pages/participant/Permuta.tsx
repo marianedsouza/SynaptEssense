@@ -159,18 +159,20 @@ export function Permuta() {
       }
       const userId = signUpData.user?.id ?? null
 
-      const { error: leadError } = await supabase.from('protocol_leads').insert({
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email,
-        plan,
-        user_id: userId,
-        modality,
-        payment_mode: 'permuta',
-        created_at: new Date().toISOString(),
+      // Cria o contato do paciente (protocol_leads) + as sessões do protocolo
+      // via RPC (security definer), contornando o RLS das tabelas.
+      const { error: accessError } = await supabase.rpc('create_permuta_access', {
+        payload: {
+          name: form.name.trim(),
+          phone: form.phone.trim(),
+          email,
+          plan,
+          user_id: userId,
+          modality,
+        },
       })
-      if (leadError) {
-        throw new Error(`Não foi possível registrar o protocolo: ${leadError.message}`)
+      if (accessError) {
+        throw new Error(`Não foi possível registrar o protocolo: ${accessError.message}`)
       }
 
       navigate('/minha-area?status=permuta', { replace: true })

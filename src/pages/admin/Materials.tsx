@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   AudioLines,
+  ChevronDown,
   CloudUpload,
   FileText,
   Headphones,
@@ -8,6 +9,7 @@ import {
   Sparkles,
   Trash2,
   Upload,
+  Users,
 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import {
@@ -450,6 +452,7 @@ function MaterialRow({
   onToggle: () => void
   onVisibilityChange: (leadId: string, checked: boolean) => void
 }) {
+  const [visOpen, setVisOpen] = useState(false)
   const url = materialPublicUrl(material.storage_path)
   const Icon = material.type === 'audio' ? AudioLines : FileText
   const visibleTo = material.visible_to ?? []
@@ -522,39 +525,57 @@ function MaterialRow({
       </div>
     </div>
 
-      {!material.active && (
-        <div className="border-t border-ink/10 px-4 py-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-se-violet">
-            Liberar para pacientes específicos
+      <div className="border-t border-ink/10">
+        <button
+          type="button"
+          onClick={() => setVisOpen((v) => !v)}
+          className="flex w-full items-center gap-2 px-4 py-2.5 text-left transition hover:bg-se-mist/50"
+        >
+          <Users className="h-4 w-4 shrink-0 text-se-violet" />
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-se-violet">
+            Pacientes com acesso
+          </span>
+          <span className="rounded-full bg-se-lavender px-2 py-0.5 text-[10px] font-medium text-se-violet">
+            {visibleTo.length}
+          </span>
+          <ChevronDown
+            className={`ml-auto h-4 w-4 text-ink-muted transition-transform ${visOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {visOpen && (
+          <div className="px-4 pb-3">
+            <p className="mb-2 text-xs text-ink-muted">
+              {material.active
+                ? 'Material ATIVO: visível para todos os participantes. As marcações abaixo passam a valer quando ele for desativado.'
+                : visibleNames.length > 0
+                  ? `Visível apenas para: ${visibleNames.join(', ')}`
+                  : 'Material oculto. Marque abaixo quem pode ver este material.'}
+            </p>
+            <div className="max-h-44 space-y-0.5 overflow-y-auto rounded-xl border border-ink/5 bg-white p-1.5">
+              {patients.length === 0 ? (
+                <p className="px-2 py-1.5 text-xs text-ink-muted">Nenhum paciente cadastrado ainda.</p>
+              ) : (
+                patients.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition hover:bg-se-mist"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visibleTo.includes(p.id)}
+                      onChange={(e) => onVisibilityChange(p.id, e.target.checked)}
+                      className="h-4 w-4 rounded border-ink/20 text-se-violet focus:ring-se-violet/30"
+                    />
+                    <span className="text-ink">{p.name}</span>
+                    {p.email && <span className="text-xs text-ink-muted">· {p.email}</span>}
+                  </label>
+                ))
+              )}
+            </div>
           </div>
-          <p className="mt-1 text-xs text-ink-muted">
-            {visibleNames.length > 0
-              ? `Visível para: ${visibleNames.join(', ')}`
-              : 'Oculto para todos. Marque abaixo quem pode ver este material.'}
-          </p>
-          <div className="mt-2 max-h-44 space-y-0.5 overflow-y-auto">
-            {patients.length === 0 ? (
-              <p className="text-xs text-ink-muted">Nenhum paciente cadastrado ainda.</p>
-            ) : (
-              patients.map((p) => (
-                <label
-                  key={p.id}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition hover:bg-se-mist"
-                >
-                  <input
-                    type="checkbox"
-                    checked={visibleTo.includes(p.id)}
-                    onChange={(e) => onVisibilityChange(p.id, e.target.checked)}
-                    className="h-4 w-4 rounded border-ink/20 text-se-violet focus:ring-se-violet/30"
-                  />
-                  <span className="text-ink">{p.name}</span>
-                  {p.email && <span className="text-xs text-ink-muted">· {p.email}</span>}
-                </label>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

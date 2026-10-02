@@ -75,7 +75,6 @@ export function Settings() {
     }
     results.push(await saveSetting('analyst_photo', photoUrl))
     results.push(await saveSetting('analyst2_photo', photoUrl2))
-    results.push(await saveSetting('combined_payment_enabled', values.combined_payment_enabled ?? 'true'))
     const failed = results.find((r) => !r.ok)
     if (failed) {
       setSaveError(`Não foi possível salvar: ${failed.error}`)
@@ -441,49 +440,6 @@ export function Settings() {
         </div>
       </div>
 
-      {/* Controle do link de pagamento combinado */}
-      <div className="card mt-6 p-5 md:p-8">
-        <h2 className="font-display text-xl font-semibold text-ink">
-          Link de pagamento combinado
-        </h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Controle se o link de acesso com pagamento combinado (sem Mercado Pago) está liberado.
-          Quando desligado, o link exibe uma mensagem de indisponível.
-        </p>
-
-        <div className="mt-6 flex items-center justify-between rounded-2xl border border-ink/5 bg-se-mist/40 px-5 py-4">
-          <div>
-            <div className="text-sm font-semibold text-ink">
-              {values.combined_payment_enabled !== 'false' ? 'Acesso liberado' : 'Acesso bloqueado'}
-            </div>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              {values.combined_payment_enabled !== 'false'
-                ? 'Novos pacientes podem criar o ambiente pelo link de pagamento combinado.'
-                : 'O link está desativado — ninguém consegue criar ambiente por ele.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={values.combined_payment_enabled !== 'false'}
-            onClick={() =>
-              set('combined_payment_enabled', values.combined_payment_enabled !== 'false' ? 'false' : 'true')
-            }
-            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
-              values.combined_payment_enabled !== 'false' ? 'bg-se-teal' : 'bg-ink/20'
-            }`}
-          >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
-                values.combined_payment_enabled !== 'false' ? 'translate-x-6' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </div>
-        <p className="mt-3 text-xs text-ink-muted">
-          Lembre-se de clicar em <strong className="text-ink">Salvar</strong> no topo para aplicar a alteração.
-        </p>
-      </div>
     </AdminLayout>
   )
 }

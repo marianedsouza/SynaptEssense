@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link2, Check, MessageCircle, Copy, ExternalLink, Sparkles } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
+import { fetchSettings, saveSetting } from '../../lib/settings'
 
 interface ShareLink {
   label: string
@@ -45,6 +46,22 @@ const SHARE_MESSAGE = 'SynaptEssence360® — Plataforma de Tecnologia Social pa
 
 export function ShareLinks() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [combinedEnabled, setCombinedEnabled] = useState(true)
+  const [savingToggle, setSavingToggle] = useState(false)
+
+  useEffect(() => {
+    fetchSettings().then((s) => {
+      setCombinedEnabled(s.combined_payment_enabled !== 'false')
+    })
+  }, [])
+
+  async function toggleCombined() {
+    const next = !combinedEnabled
+    setCombinedEnabled(next)
+    setSavingToggle(true)
+    await saveSetting('combined_payment_enabled', next ? 'true' : 'false')
+    setSavingToggle(false)
+  }
 
   function getFullUrl(path: string) {
     return `${window.location.origin}${path}`
@@ -138,6 +155,43 @@ export function ShareLinks() {
                   {url}
                 </span>
               </div>
+
+              {link.tag === 'Pagamento combinado' && (
+                <div className="mt-4 rounded-xl border border-ink/5 bg-se-mist/40 p-4">
+                  <p className="text-xs leading-relaxed text-ink-muted">
+                    Controle se o link de acesso com pagamento combinado (sem Mercado Pago)
+                    está liberado. Quando desligado, o link exibe uma mensagem de indisponível.
+                  </p>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-ink">
+                        {combinedEnabled ? 'Acesso liberado' : 'Acesso bloqueado'}
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-ink-muted">
+                        {combinedEnabled
+                          ? 'Novos pacientes podem criar o ambiente pelo link de pagamento combinado.'
+                          : 'O link está desativado — ninguém consegue criar ambiente por ele.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={combinedEnabled}
+                      disabled={savingToggle}
+                      onClick={toggleCombined}
+                      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                        combinedEnabled ? 'bg-se-teal' : 'bg-ink/20'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                          combinedEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-4 flex gap-2">
                 <button

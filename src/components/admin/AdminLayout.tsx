@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { CalendarDays, Headphones, LayoutDashboard, Link2, LogOut, MousePointerClick, Settings, Sparkles, Users } from 'lucide-react'
+import { CalendarDays, Headphones, LayoutDashboard, Link2, LogOut, Megaphone, MousePointerClick, Settings, Sparkles, Users } from 'lucide-react'
 import { Logo } from '../Logo'
 import { supabase } from '../../lib/supabase'
 
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/admin/participantes', label: 'Levantamento', icon: Users, end: true, badge: false },
   { to: '/admin/compartilhar', label: 'Compartilhar', icon: Link2, end: true, badge: false },
   { to: '/admin/tracking', label: 'Tracking', icon: MousePointerClick, end: true, badge: false },
+  { to: '/admin/campanhas', label: 'Campanhas', icon: Megaphone, end: true, badge: false },
   { to: '/admin/materiais', label: 'Materiais', icon: Headphones, end: true, badge: false },
   { to: '/admin/configuracoes', label: 'Configurações', icon: Settings, end: true, badge: false },
 ]

@@ -52,6 +52,9 @@ const Materials = lazy(() =>
 const Tracking = lazy(() =>
   import('./pages/admin/Tracking').then((m) => ({ default: m.Tracking })),
 )
+const Campaigns = lazy(() =>
+  import('./pages/admin/Campaigns').then((m) => ({ default: m.Campaigns })),
+)
 
 function Fallback() {
   return (
@@ -161,6 +164,10 @@ function App() {
             <Route
               path="/admin/tracking"
               element={<AdminRoute><Tracking /></AdminRoute>}
+            />
+            <Route
+              path="/admin/campanhas"
+              element={<AdminRoute><Campaigns /></AdminRoute>}
             />
             <Route
               path="/admin/materiais"

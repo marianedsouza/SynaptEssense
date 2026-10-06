@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link2, Check, MessageCircle, Copy, ExternalLink, Sparkles } from 'lucide-react'
+import { Link2, Check, MessageCircle, Copy, ExternalLink, QrCode, Sparkles } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
+import { QrModal } from '../../components/admin/QrModal'
 import { fetchSettings, saveSetting } from '../../lib/settings'
 
 interface ShareLink {
@@ -55,6 +56,7 @@ export function ShareLinks() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [combinedEnabled, setCombinedEnabled] = useState(true)
   const [savingToggle, setSavingToggle] = useState(false)
+  const [qr, setQr] = useState<{ link: ShareLink } | null>(null)
 
   useEffect(() => {
     fetchSettings().then((s) => {
@@ -149,15 +151,25 @@ export function ShareLinks() {
                   </h3>
                   <p className="mt-1 text-xs text-ink-muted">{link.description}</p>
                 </div>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded-full p-2 text-ink-muted transition hover:bg-se-mist hover:text-ink"
-                  aria-label="Abrir página"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </a>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setQr({ link })}
+                    className="rounded-full p-2 text-ink-muted transition hover:bg-se-mist hover:text-ink"
+                    aria-label="Ver QR Code"
+                  >
+                    <QrCode className="h-4 w-4" />
+                  </button>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full p-2 text-ink-muted transition hover:bg-se-mist hover:text-ink"
+                    aria-label="Abrir página"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </div>
               </div>
 
               <div className="mt-4 flex items-center gap-2 rounded-xl border border-ink/10 bg-se-mist/50 px-3 py-2">
@@ -237,6 +249,15 @@ export function ShareLinks() {
           )
         })}
       </div>
+
+      {qr && (
+        <QrModal
+          url={getFullUrl(qr.link)}
+          title={qr.link.label}
+          fileName={`qr-${qr.link.ref}.png`}
+          onClose={() => setQr(null)}
+        />
+      )}
     </AdminLayout>
   )
 }

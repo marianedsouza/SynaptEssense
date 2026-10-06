@@ -534,6 +534,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           created_at: new Date().toISOString(),
         }),
       })
+
+      // Central de notificações: também avisa dentro da área do participante
+      const notifSource = `reminder-${ev.id}`
+      await fetch(buildUrl(supabaseUrl, '/rest/v1/notifications', {}).toString(), {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          email,
+          type: 'reminder',
+          title: 'Seu diagnóstico espera por você',
+          message: 'São apenas 5 perguntas. Continue de onde parou na página do protocolo.',
+          link_url: '/protocolo',
+          source_id: notifSource,
+        }),
+      })
       diagReminders += 1
     }
 

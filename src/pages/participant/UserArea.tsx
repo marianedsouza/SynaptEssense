@@ -11,6 +11,7 @@ import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planDurationMonths, planQuali
 import { fetchSessionsByLead, type SessionRecord } from '../../lib/sessions'
 import { getParticipantByEmail, setSessionId } from '../../lib/participants'
 import { fetchMaterials, materialPublicUrl, type Material } from '../../lib/materials'
+import { NotificationBell } from '../../components/participant/NotificationBell'
 import type { Participant } from '../../lib/types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
@@ -285,6 +286,7 @@ export function UserArea() {
           </button>
         ) : (
           <div className="flex items-center gap-2">
+            {user?.email && <NotificationBell email={user.email} />}
             <span className="hidden items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-3 py-1.5 text-xs text-ink-soft sm:inline-flex">
               <User className="h-3.5 w-3.5" />
               {user?.email}

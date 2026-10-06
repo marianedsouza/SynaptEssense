@@ -5,6 +5,7 @@ import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { useSettings } from '../../context/SettingsContext'
 import { track } from '../../lib/tracking'
+import { createNotification } from '../../lib/notifications'
 
 // ─── Diagnostic Questions ───────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ function fmtPrice(value?: string) {
 }
 
 const EMAIL_STEP_KEY = 'synapt_diag_email_step' // 'done' = já viu a etapa de e-mail
+const DIAG_EMAIL_KEY = 'synapt_diag_email' // e-mail informado no diagnóstico
 const PROGRESS_KEY = 'synapt_diag_progress' // retomada automática (item 12)
 
 interface DiagProgress {
@@ -217,6 +219,11 @@ export function Protocol() {
     }
     track('email_capture', { detail: { email } })
     markEmailStepDone()
+    try {
+      localStorage.setItem(DIAG_EMAIL_KEY, email)
+    } catch {
+      // storage indisponível — segue sem guardar
+    }
     startQuestions()
   }
 
@@ -271,6 +278,22 @@ export function Protocol() {
       track('diagnostic_result', {
         detail: { recommendation: rec, score: answers.reduce<number>((sum, a) => sum + (a ?? 0), 0) },
       })
+      // Central de notificações: avisa o participante (se capturou o e-mail)
+      let diagEmail: string | null = null
+      try {
+        diagEmail = localStorage.getItem(DIAG_EMAIL_KEY)
+      } catch {
+        diagEmail = null
+      }
+      if (diagEmail) {
+        createNotification({
+          email: diagEmail,
+          type: 'diagnostic',
+          title: 'Seu diagnóstico foi concluído',
+          message: 'A análise do seu momento está pronta — veja a indicação na página do protocolo.',
+          link_url: '/protocolo',
+        })
+      }
     }
   }
 

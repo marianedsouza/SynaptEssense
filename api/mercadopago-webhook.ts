@@ -73,6 +73,33 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           }),
         })
       }
+
+      // Central de notificações: avisa o participante quando o pagamento for aprovado
+      if (payment.status === 'approved' && payment.payer?.email) {
+        const sourceId = `mp-${payment.id}`
+        const dupRes = await fetch(
+          `${supabaseUrl}/rest/v1/notifications?email=eq.${encodeURIComponent(payment.payer.email)}&source_id=eq.${sourceId}&select=id`,
+          { headers },
+        )
+        const existing = dupRes.ok
+          ? ((await dupRes.json()) as { id: string }[])
+          : []
+        if (existing.length === 0) {
+          await fetch(`${supabaseUrl}/rest/v1/notifications`, {
+            method: 'POST',
+            headers: { ...headers, Prefer: 'return=minimal' },
+            body: JSON.stringify({
+              email: payment.payer.email,
+              type: 'payment',
+              title: 'Pagamento aprovado!',
+              message:
+                'Seu acesso foi liberado. Em breve entraremos em contato para alinhar os próximos passos do protocolo.',
+              link_url: '/minha-area',
+              source_id: sourceId,
+            }),
+          })
+        }
+      }
     }
 
     return setJson(200, { received: true })

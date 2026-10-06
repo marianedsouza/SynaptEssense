@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { SettingsProvider, useSettings } from './context/SettingsContext'
 import { ProtectedRoute } from './components/admin/ProtectedRoute'
+import { PageTracking } from './components/PageTracking'
 import { supabase } from './lib/supabase'
 import { Landing } from './pages/participant/Landing'
 import { Protocol } from './pages/participant/Protocol'
@@ -47,6 +48,9 @@ const ShareLinks = lazy(() =>
 )
 const Materials = lazy(() =>
   import('./pages/admin/Materials').then((m) => ({ default: m.Materials })),
+)
+const Tracking = lazy(() =>
+  import('./pages/admin/Tracking').then((m) => ({ default: m.Tracking })),
 )
 
 function Fallback() {
@@ -104,6 +108,7 @@ function App() {
   return (
     <SettingsProvider>
       <BrowserRouter>
+        <PageTracking />
         <Suspense fallback={<Fallback />}>
           <Routes>
             <Route path="/" element={<LandingRoute />} />
@@ -152,6 +157,10 @@ function App() {
             <Route
               path="/admin/compartilhar"
               element={<AdminRoute><ShareLinks /></AdminRoute>}
+            />
+            <Route
+              path="/admin/tracking"
+              element={<AdminRoute><Tracking /></AdminRoute>}
             />
             <Route
               path="/admin/materiais"

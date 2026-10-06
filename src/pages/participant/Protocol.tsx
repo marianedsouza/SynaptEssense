@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, ChevronDown, User } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, ChevronDown, User, Mail } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { useSettings } from '../../context/SettingsContext'
+import { track } from '../../lib/tracking'
 
 // ─── Diagnostic Questions ───────────────────────────────────────────────────
 
@@ -84,11 +85,32 @@ function fmtPrice(value?: string) {
   return n.toFixed(2).replace('.', ',')
 }
 
+const EMAIL_STEP_KEY = 'synapt_diag_email_step' // 'done' = já viu a etapa de e-mail
+
+function emailStepDone(): boolean {
+  try {
+    return localStorage.getItem(EMAIL_STEP_KEY) === 'done'
+  } catch {
+    return false
+  }
+}
+
+function markEmailStepDone() {
+  try {
+    localStorage.setItem(EMAIL_STEP_KEY, 'done')
+  } catch {
+    // storage indisponível — a etapa aparece de novo, sem quebrar nada
+  }
+}
+
 export function Protocol() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { settings } = useSettings()
   const [showDiagnostic, setShowDiagnostic] = useState(false)
+  const [showEmailStep, setShowEmailStep] = useState(false)
+  const [emailValue, setEmailValue] = useState('')
+  const [emailError, setEmailError] = useState('')
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<(number | null)[]>([null, null, null, null, null])
   const [showResult, setShowResult] = useState(false)
@@ -98,7 +120,52 @@ export function Protocol() {
   const modalitiesRef = useRef<HTMLDivElement>(null)
 
   function goToPayment(modality: 'social' | 'integral', plano: 'mensal' | 'completo') {
+    track('payment_click', { detail: { modality, plan: plano } })
     navigate(`/pagamento?modalidade=${modality}&plano=${plano}`)
+  }
+
+  /** Abre o diagnóstico: mostra a etapa de e-mail (uma vez por visitante) antes das perguntas. */
+  function openDiagnostic() {
+    setCurrentQuestion(0)
+    setAnswers([null, null, null, null, null])
+    setShowResult(false)
+    setEmailError('')
+    const skipEmail = emailStepDone()
+    setShowEmailStep(!skipEmail)
+    setShowDiagnostic(true)
+    track('diagnostic_start', { detail: { email_step: !skipEmail } })
+  }
+
+  function startQuestions() {
+    setShowEmailStep(false)
+    setEmailError('')
+  }
+
+  function handleEmailContinue() {
+    const email = emailValue.trim().toLowerCase()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setEmailError('Informe um e-mail válido para receber sua análise.')
+      return
+    }
+    track('email_capture', { detail: { email } })
+    markEmailStepDone()
+    startQuestions()
+  }
+
+  function handleEmailSkip() {
+    track('diagnostic_skip_email')
+    markEmailStepDone()
+    startQuestions()
+  }
+
+  function closeDiagnostic() {
+    if (!showResult && currentQuestion >= 0 && answers.some((a) => a !== null)) {
+      track('diagnostic_abandon', {
+        detail: { at_question: currentQuestion + 1, answered: answers.filter((a) => a !== null).length },
+      })
+    }
+    setShowDiagnostic(false)
+    setShowEmailStep(false)
   }
 
   function calculateRecommendation() {
@@ -112,6 +179,9 @@ export function Protocol() {
     const newAnswers = [...answers]
     newAnswers[currentQuestion] = value
     setAnswers(newAnswers)
+    track('diagnostic_answer', {
+      detail: { question: currentQuestion + 1, value },
+    })
   }
 
   function handleNext() {
@@ -121,6 +191,9 @@ export function Protocol() {
       const rec = calculateRecommendation()
       setRecommendation(rec)
       setShowResult(true)
+      track('diagnostic_result', {
+        detail: { recommendation: rec, score: answers.reduce<number>((sum, a) => sum + (a ?? 0), 0) },
+      })
     }
   }
 
@@ -142,10 +215,7 @@ export function Protocol() {
   // Abre o diagnóstico de momento quando acionado a partir de "Iniciar levantamento"
   useEffect(() => {
     if (searchParams.get('diagnostico') === '1') {
-      setShowDiagnostic(true)
-      setCurrentQuestion(0)
-      setAnswers([null, null, null, null, null])
-      setShowResult(false)
+      openDiagnostic()
     }
   }, [searchParams])
 
@@ -347,7 +417,7 @@ export function Protocol() {
             Responda 5 perguntas e receba uma orientação personalizada.
           </p>
           <button
-            onClick={() => { setShowDiagnostic(true); setCurrentQuestion(0); setAnswers([null, null, null, null, null]); setShowResult(false) }}
+            onClick={openDiagnostic}
             className="btn-primary mt-8 group"
           >
             Iniciar meu diagnóstico de momento
@@ -571,7 +641,61 @@ export function Protocol() {
       {showDiagnostic && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
           <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 animate-fade-up">
-            {!showResult ? (
+            {showEmailStep ? (
+              /* ─── ETAPA DE E-MAIL (antes das perguntas) ─── */
+              <>
+                <div className="mb-6 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-se-lavender">
+                    <Mail className="h-5 w-5 text-se-violet" />
+                  </div>
+                  <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-se-violet">
+                    Antes de começarmos
+                  </div>
+                  <h3 className="mt-2 font-display text-xl font-semibold text-ink">
+                    Receba sua análise por e-mail
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+                    Informe seu e-mail e nós enviamos o resumo do seu momento e a
+                    indicação personalizada — assim você não depende de salvar a página.
+                  </p>
+                </div>
+
+                <label className="label" htmlFor="diag-email">
+                  E-mail
+                </label>
+                <input
+                  id="diag-email"
+                  type="email"
+                  className="input"
+                  value={emailValue}
+                  onChange={(e) => {
+                    setEmailValue(e.target.value)
+                    if (emailError) setEmailError('')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleEmailContinue()
+                  }}
+                  placeholder="seu@email.com"
+                  autoComplete="email"
+                  autoFocus
+                />
+                {emailError && (
+                  <p className="mt-2 text-xs text-red-600">{emailError}</p>
+                )}
+
+                <button onClick={handleEmailContinue} className="btn-primary mt-5 w-full">
+                  Continuar
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={handleEmailSkip}
+                  className="mt-4 w-full text-center text-xs text-ink-muted hover:text-ink"
+                >
+                  Continuar sem e-mail
+                </button>
+              </>
+            ) : !showResult ? (
               <>
                 {/* Header */}
                 <div className="mb-6">
@@ -646,7 +770,7 @@ export function Protocol() {
 
                 {/* Close */}
                 <button
-                  onClick={() => setShowDiagnostic(false)}
+                  onClick={closeDiagnostic}
                   className="mt-4 w-full text-center text-xs text-ink-muted hover:text-ink"
                 >
                   Fechar
@@ -764,7 +888,7 @@ export function Protocol() {
                 </div>
 
                 <button
-                  onClick={() => setShowDiagnostic(false)}
+                  onClick={closeDiagnostic}
                   className="mt-4 text-xs text-ink-muted hover:text-ink"
                 >
                   Fechar

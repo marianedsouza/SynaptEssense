@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { fetchSettings } from '../lib/settings'
 import type { AnalystProfile } from '../lib/types'
@@ -7,6 +7,7 @@ interface SettingsContextValue {
   settings: Record<string, string>
   analystProfile: AnalystProfile
   analystProfile2: AnalystProfile | null
+  refresh: () => Promise<void>
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -18,16 +19,18 @@ const SettingsContext = createContext<SettingsContextValue>({
     bio: '',
   },
   analystProfile2: null,
+  refresh: async () => {},
 })
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Record<string, string>>({})
 
+  const refresh = useCallback(() => fetchSettings().then(setSettings), [])
+
   useEffect(() => {
-    const load = () => fetchSettings().then(setSettings)
-    load()
+    refresh()
     const refreshOnVisible = () => {
-      if (document.visibilityState === 'visible') load()
+      if (document.visibilityState === 'visible') refresh()
     }
     document.addEventListener('visibilitychange', refreshOnVisible)
     window.addEventListener('focus', refreshOnVisible)
@@ -35,7 +38,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', refreshOnVisible)
       window.removeEventListener('focus', refreshOnVisible)
     }
-  }, [])
+  }, [refresh])
 
   const analystProfile: AnalystProfile = {
     name: settings.analyst_name ?? 'Letícia Maria',
@@ -54,7 +57,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     : null
 
   return (
-    <SettingsContext.Provider value={{ settings, analystProfile, analystProfile2 }}>
+    <SettingsContext.Provider value={{ settings, analystProfile, analystProfile2, refresh }}>
       {children}
     </SettingsContext.Provider>
   )

@@ -9,6 +9,8 @@ interface ShareLink {
   path: string
   recommended?: boolean
   tag?: string
+  /** Slug enviado como ?ref= para rastrear a origem no painel de Tracking. */
+  ref: string
 }
 
 const SHARE_LINKS: ShareLink[] = [
@@ -16,12 +18,14 @@ const SHARE_LINKS: ShareLink[] = [
     label: 'Página Inicial',
     description: 'Landing page principal da plataforma',
     path: '/',
+    ref: 'home',
   },
   {
     label: 'Protocolo de Resgate de Identidade',
     description: 'Página do protocolo com diagnóstico e modalidades',
     path: '/protocolo',
     recommended: true,
+    ref: 'protocolo',
   },
   {
     label: 'Levantamento — Pagamento combinado',
@@ -29,16 +33,19 @@ const SHARE_LINKS: ShareLink[] = [
       'Link exclusivo para criar o ambiente de quem vai combinar o pagamento diretamente com a analista. Sem Mercado Pago.',
     path: '/pagamento-combinado',
     tag: 'Pagamento combinado',
+    ref: 'permuta',
   },
   {
     label: 'Minha Área',
     description: 'Área do participante para acompanhar progresso',
     path: '/minha-area',
+    ref: 'minha-area',
   },
   {
     label: 'Login Minha Área',
     description: 'Acesso à área restrita do participante',
     path: '/minha-area/login',
+    ref: 'login',
   },
 ]
 
@@ -63,8 +70,9 @@ export function ShareLinks() {
     setSavingToggle(false)
   }
 
-  function getFullUrl(path: string) {
-    return `${window.location.origin}${path}`
+  function getFullUrl(link: ShareLink) {
+    const separator = link.path.includes('?') ? '&' : '?'
+    return `${window.location.origin}${link.path}${separator}ref=${link.ref}`
   }
 
   const handleCopy = async (url: string, index: number) => {
@@ -100,13 +108,16 @@ export function ShareLinks() {
           Links para Compartilhamento
         </h1>
         <p className="mt-2 max-w-xl text-sm text-ink-soft">
-          Copie ou compartilhe os links das páginas da plataforma.
+          Copie ou compartilhe os links das páginas da plataforma. Cada link carrega um{' '}
+          <code className="rounded bg-ink/5 px-1">?ref=</code> próprio — as visitas,
+          diagnósticos e e-mails aparecem no painel{' '}
+          <span className="font-medium text-ink">Tracking</span>.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {SHARE_LINKS.map((link, index) => {
-          const url = getFullUrl(link.path)
+          const url = getFullUrl(link)
           const isCopied = copiedIndex === index
 
           return (

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, CreditCard, Shield, Lock, QrCode, Landmark } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
 import { useSettings } from '../../context/SettingsContext'
+import { track } from '../../lib/tracking'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
@@ -20,7 +21,13 @@ const MODALITY_LABELS: Record<ModalityType, string> = {
 export function Payment() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { settings } = useSettings()
+  const { settings, refresh } = useSettings()
+
+  // Preço sempre fresco: garante que trocar o valor no painel do analista
+  // apareça aqui e seja enviado ao Mercado Pago.
+  useEffect(() => {
+    refresh()
+  }, [refresh])
 
   const modality = (searchParams.get('modalidade') as ModalityType) || 'social'
   const plan = (searchParams.get('plano') as PlanType) || 'completo'
@@ -55,6 +62,7 @@ export function Payment() {
 
     setStep('processing')
     setErrorMessage('')
+    track('payment_click', { detail: { modality, plan, source: 'payment_form' } })
 
     try {
       // 1. Create / authenticate the user's account

@@ -3,6 +3,7 @@ import { ImagePlus, Save, CreditCard } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
 import { fetchSettings, saveSetting } from '../../lib/settings'
 import { supabase } from '../../lib/supabase'
+import { useSettings } from '../../context/SettingsContext'
 
 const FIELDS_ANALYST1: { key: string; label: string; textarea?: boolean }[] = [
   { key: 'analyst_name', label: 'Nome' },
@@ -25,13 +26,16 @@ const FIELDS_GENERAL: { key: string; label: string; textarea?: boolean }[] = [
 
 const FIELDS_PAYMENT_SOCIAL: { key: string; label: string; description: string }[] = [
   { key: 'payment_social_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único do Protocolo Essencial — processo completo de 90 dias. Parcelável via Mercado Pago.' },
+  { key: 'payment_social_monthly', label: 'Valor do plano mensal (R$)', description: 'Cobrança mensal do Protocolo Essencial para quem prefere pagar mês a mês via Mercado Pago.' },
 ]
 
 const FIELDS_PAYMENT_INTEGRAL: { key: string; label: string; description: string }[] = [
   { key: 'payment_integral_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único da Mentoria Integral — processo completo de 90 dias. Parcelável via Mercado Pago.' },
+  { key: 'payment_integral_monthly', label: 'Valor do plano mensal (R$)', description: 'Cobrança mensal da Mentoria Integral para quem prefere pagar mês a mês via Mercado Pago.' },
 ]
 
 export function Settings() {
+  const { refresh } = useSettings()
   const [values, setValues] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [saved, setSaved] = useState(false)
@@ -80,6 +84,8 @@ export function Settings() {
       setSaveError(`Não foi possível salvar: ${failed.error}`)
       return
     }
+    // Atualiza o cache global para as páginas públicas exibirem o novo valor já.
+    await refresh()
     setSaved(true)
     window.setTimeout(() => setSaved(false), 2000)
   }
@@ -436,6 +442,9 @@ export function Settings() {
         <div className="mt-4 rounded-xl border border-se-lavender bg-se-lavender/30 px-4 py-3 text-xs text-ink-soft">
           <strong className="text-ink">Nota:</strong> O participante paga o valor total da jornada
           de uma vez via Mercado Pago, com parcelamento.
+          Ao salvar, o novo valor passa a ser usado em toda nova cobrança criada no
+          Mercado Pago (o preço é lido do banco no momento do checkout — cobranças já
+          criadas mantêm o valor da época em que foram geradas).
           A public key do Mercado Pago é configurada na variável de ambiente <code className="rounded bg-ink/5 px-1">VITE_MERCADOPAGO_PUBLIC_KEY</code>.
         </div>
       </div>

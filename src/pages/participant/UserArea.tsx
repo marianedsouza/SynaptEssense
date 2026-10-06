@@ -5,6 +5,8 @@ import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
 import { useSettings } from '../../context/SettingsContext'
+import { fetchSettings } from '../../lib/settings'
+import { track } from '../../lib/tracking'
 import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planDurationMonths, planQualityLabel } from '../../lib/protocol'
 import { fetchSessionsByLead, type SessionRecord } from '../../lib/sessions'
 import { getParticipantByEmail, setSessionId } from '../../lib/participants'
@@ -125,10 +127,15 @@ export function UserArea() {
     setPaying(true)
     setPayError(null)
 
+    // Lê os valores direto do banco antes de criar a preferência — evita usar
+    // o cache do contexto e garante que o preço trocado no painel chegue ao MP.
+    const freshSettings = await fetchSettings()
     const amount =
       lastLead.modality === 'social'
-        ? parseFloat(targetPlan === 'mensal' ? settings.payment_social_monthly : settings.payment_social_complete) || 0
-        : parseFloat(targetPlan === 'mensal' ? settings.payment_integral_monthly : settings.payment_integral_complete) || 0
+        ? parseFloat(targetPlan === 'mensal' ? freshSettings.payment_social_monthly : freshSettings.payment_social_complete) || 0
+        : parseFloat(targetPlan === 'mensal' ? freshSettings.payment_integral_monthly : freshSettings.payment_integral_complete) || 0
+
+    track('payment_click', { detail: { modality: lastLead.modality, plan: targetPlan, source: 'user_area' } })
 
     try {
       if (!amount || amount <= 0) {

@@ -20,6 +20,44 @@ serve(async (req) => {
       throw new Error("MP_ACCESS_TOKEN não configurado no Supabase.")
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Fonte de verdade dos preços: tabela `settings` (editada no painel do analista).
+    // Assim, trocar o valor no painel reflete imediatamente no checkout do
+    // Mercado Pago — o `amount` do cliente vira apenas fallback.
+    const planKey = plan === "mensal" ? "monthly" : "complete"
+    const priceKey = `payment_${modalidade === "integral" ? "integral" : "social"}_${planKey}`
+    let unitPrice = 0
+    try {
+      const { data: priceRow } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", priceKey)
+        .maybeSingle()
+      const serverPrice = parseFloat(priceRow?.value || "0")
+      if (!isNaN(serverPrice) && serverPrice > 0) {
+        unitPrice = serverPrice
+      }
+    } catch {
+      // segue com o fallback abaixo
+    }
+    if (!unitPrice) {
+      unitPrice = Number(amount)
+    }
+    if (!unitPrice || isNaN(unitPrice) || unitPrice <= 0) {
+      return new Response(
+        JSON.stringify({
+          error: `Valor do plano não configurado (${priceKey}). Informe os valores no painel do analista.`,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      )
+    }
+
     const origin = req.headers.get("x-site-url") || Deno.env.get("SITE_URL") || ""
 
     // O Mercado Pago só aceita auto_return / notification_url com URL pública (https).
@@ -36,7 +74,7 @@ serve(async (req) => {
         {
           title: `Protocolo SynaptEssence360® - ${modalityLabel} (${planLabel})`,
           quantity: 1,
-          unit_price: Number(amount),
+          unit_price: unitPrice,
           currency_id: "BRL",
         },
       ],
@@ -100,15 +138,11 @@ serve(async (req) => {
 
     // Save preference id to payments table
     try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      const supabase = createClient(supabaseUrl, supabaseKey)
-
       await supabase.from("payments").insert({
         lead_id: lead_id || null,
         modality: modalidade,
         plan: plan || "completo",
-        amount: Number(amount),
+        amount: unitPrice,
         currency: "BRL",
         status: "pending",
         mp_preference_id: mpData.id,

@@ -45,7 +45,7 @@ const QUESTIONS = [
   {
     id: 4,
     title: 'Necessidade de Acompanhamento',
-    question: 'O que você acredita que mais ajudaria durante os próximos 90 dias?',
+    question: 'O que você acredita que mais ajudaria ao longo desta jornada?',
     options: [
       { label: 'Ter encontros estruturados para refletir e desenvolver novas perspectivas.', value: 1 },
       { label: 'Ter um processo organizado que me ajude a transformar compreensão em ação.', value: 2 },
@@ -387,7 +387,7 @@ export function Permuta() {
                   <h3 className="font-display text-lg font-semibold text-ink">{MODALITY_LABELS[m]}</h3>
                   <p className="mt-1 text-xs text-ink-muted">
                     {m === 'social'
-                      ? 'Jornada completa de 90 dias • metodologia completa • reavaliação final'
+                      ? 'Jornada completa • metodologia completa • avaliação de evolução'
                       : 'Tudo do Essencial + mentoria dedicada, suporte via WhatsApp e caderno de regeneração.'}
                   </p>
                   <div className="mt-4 space-y-1 text-sm text-ink-soft">
@@ -433,7 +433,7 @@ export function Permuta() {
                   Resumo da escolha
                 </div>
                 <div className="mt-2 font-medium text-ink">
-                  {MODALITY_LABELS[modality]} • Jornada completa de 90 dias
+                  {MODALITY_LABELS[modality]} • Jornada completa
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-se-violet">
                   <Sparkles className="h-3.5 w-3.5" />

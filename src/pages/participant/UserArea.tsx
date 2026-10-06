@@ -557,7 +557,7 @@ export function UserArea() {
                   <div className="mt-1 font-display text-2xl font-semibold text-ink">
                     R${fmtCurrency(parseFloat(priceComplete || '0')).replace('R$ ', '')}
                   </div>
-                  <div className="mt-1 text-[11px] text-ink-muted">Jornada de 90 dias • parcelável via Mercado Pago</div>
+                  <div className="mt-1 text-[11px] text-ink-muted">Jornada completa • parcelável via Mercado Pago</div>
                 </div>
               </div>
             </div>

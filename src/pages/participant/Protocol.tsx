@@ -45,7 +45,7 @@ const QUESTIONS = [
   {
     id: 4,
     title: 'Necessidade de Acompanhamento',
-    question: 'O que você acredita que mais ajudaria durante os próximos 90 dias?',
+    question: 'O que você acredita que mais ajudaria ao longo desta jornada?',
     options: [
       { label: 'Ter encontros estruturados para refletir e desenvolver novas perspectivas.', value: 1 },
       { label: 'Ter um processo organizado que me ajude a transformar compreensão em ação.', value: 2 },
@@ -281,13 +281,13 @@ export function Protocol() {
         <div className="mx-auto max-w-3xl" data-animate>
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-se-violet/20 bg-white/70 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-se-violet backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-se-teal animate-pulse-dot" />
-            Jornada de 90 dias
+            Jornada de acompanhamento
           </div>
           <h1 className="font-display text-3xl font-semibold leading-tight text-ink md:text-5xl">
             Protocolo de Resgate de Identidade
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-ink-soft md:text-lg">
-            90 dias para reconstruir novas conexões entre quem você é, o que vive e o que escolhe manifestar.
+            Uma jornada para reconstruir novas conexões entre quem você é, o que vive e o que escolhe manifestar.
           </p>
           <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-se-violet/10 bg-white/60 px-8 py-5 backdrop-blur-sm">
             <p className="text-sm leading-relaxed text-ink-soft">
@@ -315,7 +315,6 @@ export function Protocol() {
             {[
               '12 encontros',
               '1 encontro por semana',
-              '90 dias',
               'Processo individual',
               'Metodologia SynaptEssence360®',
               'Exercícios entre sessões',
@@ -332,24 +331,24 @@ export function Protocol() {
         </div>
       </section>
 
-      {/* ─── POR QUE 90 DIAS ─── */}
+      {/* ─── POR QUE UM PROCESSO ─── */}
       <section className="relative z-10 px-6 py-20 md:py-28">
         <div className="mx-auto max-w-4xl" data-animate>
           <div className="text-center">
             <h2 className="font-display text-2xl font-semibold text-ink md:text-4xl">
-              Por que um protocolo de 90 dias?
+              Por que um processo estruturado?
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-ink-soft md:text-base">
-              Transformação não acontece em encontros isolados. Novas conexões neurais, emocionais e comportamentais precisam de continuidade para serem consolidadas. O protocolo de 90 dias cria o ambiente necessário para que a mudança deixe de ser um insight e se torne uma nova forma de viver.
+              Transformação não acontece em encontros isolados. Novas conexões neurais, emocionais e comportamentais precisam de continuidade para serem consolidadas. Um processo estruturado cria o ambiente necessário para que a mudança deixe de ser um insight e se torne uma nova forma de viver.
             </p>
           </div>
           <div className="mt-14 flex flex-col items-center gap-0">
-            {['Semana 1', 'Compreensão', 'Integração', 'Reposicionamento', 'Expressão', 'Nova identidade'].map((step, i) => (
+            {['Compreensão', 'Integração', 'Reposicionamento', 'Expressão', 'Nova identidade'].map((step, i) => (
               <div key={step} className="flex flex-col items-center">
-                <div className={`rounded-full px-6 py-3 text-sm font-medium ${i === 5 ? 'bg-gradient-to-r from-se-teal to-se-violet text-white shadow-lift' : 'border border-se-violet/15 bg-white text-ink'}`}>
+                <div className={`rounded-full px-6 py-3 text-sm font-medium ${i === 4 ? 'bg-gradient-to-r from-se-teal to-se-violet text-white shadow-lift' : 'border border-se-violet/15 bg-white text-ink'}`}>
                   {step}
                 </div>
-                {i < 5 && (
+                {i < 4 && (
                   <div className="flex h-8 items-center">
                     <ChevronDown className="h-4 w-4 text-se-violet/40" />
                   </div>
@@ -442,17 +441,17 @@ export function Protocol() {
               )}
               <h3 className="font-display text-xl font-semibold text-ink">Modalidade Protocolo Essencial</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                Uma jornada estruturada de 90 dias para reconstruir sua identidade,
+                Uma jornada estruturada para reconstruir sua identidade,
                 seu posicionamento e sua coerência. Não é um pacote de sessões — é
                 um processo completo de transformação.
               </p>
               <div className="mt-6 space-y-2">
                 {[
-                  'Jornada completa de 90 dias',
+                  'Jornada completa',
                   '12 encontros individuais ao longo do processo',
                   'Aplicação integral da metodologia SynaptEssence360®',
                   'Exercícios de integração entre os encontros',
-                  'Reavaliação e devolutiva ao final da jornada',
+                  'Avaliação e devolutiva de sua evolução',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-2">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-se-teal" />
@@ -466,7 +465,7 @@ export function Protocol() {
                   R${fmtPrice(settings.payment_social_complete)}
                 </div>
                 <p className="mt-2 text-xs text-ink-muted">
-                  Protocolo completo de 90 dias. Parcelamento via Mercado Pago.
+                  Protocolo completo. Parcelamento via Mercado Pago.
                 </p>
               </div>
               <div className="mt-6">
@@ -488,7 +487,7 @@ export function Protocol() {
               </div>
               <h3 className="font-display text-xl font-semibold text-ink">Modalidade Mentoria Integral</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                Uma jornada de 90 dias com acompanhamento mais próximo, estratégico e
+                Uma jornada com acompanhamento mais próximo, estratégico e
                 personalizado. Para quem vive processos de reconstrução pessoal, familiar
                 ou relacional e deseja uma mentoria dedicada em cada etapa. Não é um pacote
                 de sessões — é um processo completo de transformação com mentoria.
@@ -499,7 +498,7 @@ export function Protocol() {
               <div className="space-y-2">
                 {[
                   'Planejamento individual do protocolo',
-                  'Acompanhamento estratégico durante os 90 dias',
+                  'Acompanhamento estratégico ao longo do processo',
                   'Suporte entre encontros via WhatsApp (horário comercial)',
                   'Exercícios personalizados',
                   'Ajustes individualizados conforme evolução',
@@ -521,7 +520,7 @@ export function Protocol() {
                   R${fmtPrice(settings.payment_integral_complete)}
                 </div>
                 <p className="mt-2 text-xs text-ink-muted">
-                  Mentoria completa de 90 dias. Parcelamento via Mercado Pago.
+                  Mentoria completa. Parcelamento via Mercado Pago.
                 </p>
               </div>
               <div className="mt-6">
@@ -542,7 +541,7 @@ export function Protocol() {
           </h2>
           <div className="mt-10 rounded-3xl border border-ink/5 bg-white p-6 md:p-8">
             <p className="text-sm leading-relaxed text-ink-soft">
-              A metodologia é exatamente a mesma e ambas são jornadas completas de 90 dias. O diferencial da Mentoria Integral está na <strong className="text-ink">profundidade do acompanhamento</strong>, personalização, suporte ao longo do processo e construção estratégica da jornada.
+              A metodologia é exatamente a mesma e ambas são jornadas completas. O diferencial da Mentoria Integral está na <strong className="text-ink">profundidade do acompanhamento</strong>, personalização, suporte ao longo do processo e construção estratégica da jornada.
             </p>
             <div className="mt-6 overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -605,7 +604,7 @@ export function Protocol() {
               className="mt-1 h-4 w-4 rounded border-ink/20 text-se-violet focus:ring-se-violet/30"
             />
             <span className="text-xs leading-relaxed text-ink-soft md:text-sm">
-              Declaro compreender que este protocolo é um processo de desenvolvimento construído ao longo de 90 dias e me comprometo a participar ativamente da minha jornada.
+              Declaro compreender que este protocolo é um processo de desenvolvimento contínuo e me comprometo a participar ativamente da minha jornada.
             </span>
           </label>
         </div>
@@ -795,7 +794,7 @@ export function Protocol() {
                       Pelo que você compartilhou, o Protocolo Essencial parece oferecer a estrutura adequada para a jornada que está vivendo.
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-                      Ela proporciona o acompanhamento necessário para desenvolver consciência, novas perspectivas e práticas de transformação ao longo dos 90 dias, com a metodologia SynaptEssence360®.
+                      Ela proporciona o acompanhamento necessário para desenvolver consciência, novas perspectivas e práticas de transformação ao longo do processo, com a metodologia SynaptEssence360®.
                     </p>
                     <button onClick={() => scrollToModalities('social')} className="btn-primary mt-6">
                       Conhecer o Protocolo Essencial <ArrowRight className="h-4 w-4" />
@@ -831,7 +830,7 @@ export function Protocol() {
                       Pelas características do momento que você descreveu, a Mentoria Integral parece fazer mais sentido para sua jornada atual.
                     </p>
                     <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-                      Suas respostas indicam um momento que pode se beneficiar de maior proximidade, personalização e suporte estratégico durante os 90 dias.
+                      Suas respostas indicam um momento que pode se beneficiar de maior proximidade, personalização e suporte estratégico ao longo do processo.
                     </p>
                     <button onClick={() => scrollToModalities('integral')} className="btn-primary mt-6">
                       Conhecer minha recomendação <ArrowRight className="h-4 w-4" />

@@ -25,12 +25,12 @@ const FIELDS_GENERAL: { key: string; label: string; textarea?: boolean }[] = [
 ]
 
 const FIELDS_PAYMENT_SOCIAL: { key: string; label: string; description: string }[] = [
-  { key: 'payment_social_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único do Protocolo Essencial — processo completo de 90 dias. Parcelável via Mercado Pago.' },
+  { key: 'payment_social_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único do Protocolo Essencial — processo completo. Parcelável via Mercado Pago.' },
   { key: 'payment_social_monthly', label: 'Valor do plano mensal (R$)', description: 'Cobrança mensal do Protocolo Essencial para quem prefere pagar mês a mês via Mercado Pago.' },
 ]
 
 const FIELDS_PAYMENT_INTEGRAL: { key: string; label: string; description: string }[] = [
-  { key: 'payment_integral_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único da Mentoria Integral — processo completo de 90 dias. Parcelável via Mercado Pago.' },
+  { key: 'payment_integral_complete', label: 'Valor da jornada completa (R$)', description: 'Investimento único da Mentoria Integral — processo completo. Parcelável via Mercado Pago.' },
   { key: 'payment_integral_monthly', label: 'Valor do plano mensal (R$)', description: 'Cobrança mensal da Mentoria Integral para quem prefere pagar mês a mês via Mercado Pago.' },
 ]
 

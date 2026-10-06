@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock,
+  MessageCircle,
   Pencil,
   Phone,
   Save,
@@ -14,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { AdminLayout } from '../../components/admin/AdminLayout'
+import { AdminMessagesPanel } from '../../components/admin/AdminMessagesPanel'
 import { supabase } from '../../lib/supabase'
 import { MODALITY_LABELS, PROTOCOL_TOTAL_SESSIONS, planQualityLabel } from '../../lib/protocol'
 import { ARCHETYPE_META, type ArchetypeId } from '../../lib/intelligence'
@@ -652,6 +654,21 @@ export function LeadDetail() {
           </div>
         )}
       </div>
+
+      {lead.email ? (
+        <AdminMessagesPanel email={lead.email.toLowerCase()} />
+      ) : (
+        <div className="card mt-6 p-6">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-se-violet" />
+            <h2 className="font-display text-lg font-semibold text-ink">Mensagens com o participante</h2>
+          </div>
+          <p className="mt-3 text-sm text-ink-muted">
+            Adicione um e-mail ao cadastro deste interessado para conversar com ele pela área
+            do usuário.
+          </p>
+        </div>
+      )}
 
       <p className="mt-4 text-xs text-ink-muted">
         Sessões restantes: <span className="font-semibold text-ink">{remaining}</span> de {PROTOCOL_TOTAL_SESSIONS}.

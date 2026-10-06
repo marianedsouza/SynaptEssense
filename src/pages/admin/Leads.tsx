@@ -10,6 +10,7 @@ interface Lead {
   phone: string
   email: string
   modality: string
+  plan: string | null
   payment_mode: string | null
   created_at: string
 }
@@ -55,6 +56,9 @@ export function Leads() {
   const [loading, setLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear().toString())
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
+  const [filterModality, setFilterModality] = useState<'todos' | 'social' | 'integral'>('todos')
+  const [filterPlan, setFilterPlan] = useState<'todos' | 'mensal' | 'completo'>('todos')
+  const [filterPayment, setFilterPayment] = useState<'todos' | 'paid' | 'pending' | 'permuta' | 'none'>('todos')
 
   const load = useCallback(async () => {
     try {
@@ -148,8 +152,30 @@ export function Leads() {
   if (activeMonth !== 'todos') {
     filteredLeads = filteredLeads.filter((l) => monthKey(l.created_at) === activeMonth)
   }
-  const filteredPaid = filteredLeads.filter((l) => l.payment?.status === 'approved')
-  const filteredRevenue = filteredPaid.reduce((sum, l) => sum + (l.payment?.amount ?? 0), 0)
+
+  // Segmentação (item 13): modalidade, plano e estágio de pagamento
+  let segmentLeads = filteredLeads
+  if (filterModality !== 'todos') {
+    segmentLeads = segmentLeads.filter((l) => l.modality === filterModality)
+  }
+  if (filterPlan !== 'todos') {
+    segmentLeads = segmentLeads.filter((l) => l.plan === filterPlan)
+  }
+  if (filterPayment !== 'todos') {
+    segmentLeads = segmentLeads.filter((l) => {
+      if (filterPayment === 'paid') return l.payment?.status === 'approved'
+      if (filterPayment === 'pending') return l.payment?.status === 'pending'
+      if (filterPayment === 'permuta') return !l.payment && l.payment_mode === 'permuta'
+      return !l.payment
+    })
+  }
+
+  const segmentPaid = segmentLeads.filter((l) => l.payment?.status === 'approved')
+  const segmentRevenue = segmentPaid.reduce((sum, l) => sum + (l.payment?.amount ?? 0), 0)
+  const segmentPending = segmentLeads.filter((l) => l.payment?.status === 'pending').length
+  const segmentPermuta = segmentLeads.filter((l) => !l.payment && l.payment_mode === 'permuta').length
+  const segmentNone = segmentLeads.filter((l) => !l.payment && l.payment_mode !== 'permuta').length
+  const hasSegments = filterModality !== 'todos' || filterPlan !== 'todos' || filterPayment !== 'todos'
 
   return (
     <AdminLayout>
@@ -169,31 +195,113 @@ export function Leads() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5 mb-6">
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Total</div>
-          <div className="mt-1 font-display text-2xl font-semibold text-se-violet">{filteredLeads.length}</div>
+          <div className="mt-1 font-display text-2xl font-semibold text-se-violet">{segmentLeads.length}</div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Social</div>
           <div className="mt-1 font-display text-2xl font-semibold text-se-teal">
-            {filteredLeads.filter((l) => l.modality === 'social').length}
+            {segmentLeads.filter((l) => l.modality === 'social').length}
           </div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Integral</div>
           <div className="mt-1 font-display text-2xl font-semibold text-se-violet">
-            {filteredLeads.filter((l) => l.modality === 'integral').length}
+            {segmentLeads.filter((l) => l.modality === 'integral').length}
           </div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Pagos</div>
           <div className="mt-1 font-display text-2xl font-semibold text-se-teal">
-            {filteredPaid.length}
+            {segmentPaid.length}
           </div>
         </div>
         <div className="card p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Receita</div>
           <div className="mt-1 font-display text-2xl font-semibold text-ink">
-            {fmtCurrency(filteredRevenue)}
+            {fmtCurrency(segmentRevenue)}
           </div>
+        </div>
+      </div>
+
+      {/* Segmentação */}
+      <div className="card mb-6 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-se-violet" />
+            <span className="text-sm font-medium text-ink">Segmentar perfis</span>
+            {hasSegments && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterModality('todos')
+                  setFilterPlan('todos')
+                  setFilterPayment('todos')
+                }}
+                className="text-[11px] font-semibold text-se-violet hover:underline"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="label">Modalidade</label>
+            <select
+              value={filterModality}
+              onChange={(e) => setFilterModality(e.target.value as 'todos' | 'social' | 'integral')}
+              className="input"
+            >
+              <option value="todos">Todas as modalidades</option>
+              <option value="social">Protocolo Essencial</option>
+              <option value="integral">Mentoria Integral</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Plano</label>
+            <select
+              value={filterPlan}
+              onChange={(e) => setFilterPlan(e.target.value as 'todos' | 'mensal' | 'completo')}
+              className="input"
+            >
+              <option value="todos">Todos os planos</option>
+              <option value="mensal">Plano mensal</option>
+              <option value="completo">Plano completo</option>
+            </select>
+          </div>
+          <div>
+            <label className="label">Pagamento</label>
+            <select
+              value={filterPayment}
+              onChange={(e) => setFilterPayment(e.target.value as 'todos' | 'paid' | 'pending' | 'permuta' | 'none')}
+              className="input"
+            >
+              <option value="todos">Qualquer situação</option>
+              <option value="paid">Pagamento aprovado</option>
+              <option value="pending">Pagamento pendente</option>
+              <option value="permuta">Pagamento combinado</option>
+              <option value="none">Sem pagamento</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-se-teal/10 px-3 py-1 text-xs font-semibold text-se-teal">
+            {segmentPaid.length} pago{segmentPaid.length === 1 ? '' : 's'}
+          </span>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
+            {segmentPending} pendente{segmentPending === 1 ? '' : 's'}
+          </span>
+          <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600">
+            {segmentPermuta} combinado{segmentPermuta === 1 ? '' : 's'}
+          </span>
+          <span className="rounded-full bg-ink/5 px-3 py-1 text-xs font-semibold text-ink-muted">
+            {segmentNone} sem pagamento
+          </span>
+          {hasSegments && (
+            <span className="rounded-full bg-se-lavender px-3 py-1 text-xs font-semibold text-se-violet">
+              Segmento: {segmentLeads.length} perfil{segmentLeads.length === 1 ? '' : 's'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -210,7 +318,7 @@ export function Leads() {
                   : `Perfis de ${monthLabel(activeMonth)} ${yearKey(activeMonth)}`}
             </h2>
             <span className="rounded-full bg-se-lavender px-2.5 py-0.5 text-xs font-medium text-se-violet">
-              {filteredLeads.length}
+              {segmentLeads.length}
             </span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -256,11 +364,15 @@ export function Leads() {
           <div className="px-5 py-16 text-center text-sm text-ink-muted">
             Nenhum perfil registrado neste mês.
           </div>
+        ) : segmentLeads.length === 0 ? (
+          <div className="px-5 py-16 text-center text-sm text-ink-muted">
+            Nenhum perfil corresponde a este segmento. Ajuste os filtros acima.
+          </div>
         ) : (
           <>
             {/* Mobile */}
             <div className="sm:hidden">
-              {filteredLeads.map((lead) => (
+              {segmentLeads.map((lead) => (
                 <div key={lead.id} className="border-b border-ink/5 px-4 py-4 last:border-b-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -338,7 +450,7 @@ export function Leads() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeads.map((lead) => (
+                  {segmentLeads.map((lead) => (
                     <tr key={lead.id} className="border-b border-ink/5 transition-colors hover:bg-se-mist/60">
                       <td className="px-5 py-3">
                         <Link to={`/admin/interesses/${lead.id}`} className="font-medium text-ink hover:text-se-violet">

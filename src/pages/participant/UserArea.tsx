@@ -12,6 +12,7 @@ import { fetchSessionsByLead, type SessionRecord } from '../../lib/sessions'
 import { getParticipantByEmail, setSessionId } from '../../lib/participants'
 import { fetchMaterials, materialPublicUrl, type Material } from '../../lib/materials'
 import { NotificationBell } from '../../components/participant/NotificationBell'
+import { MessagesSection } from '../../components/participant/MessagesSection'
 import type { Participant } from '../../lib/types'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
@@ -764,6 +765,9 @@ export function UserArea() {
                 </div>
               )}
             </div>
+
+            {/* Mensagens com a analista */}
+            {user?.email ? <MessagesSection email={user.email} disabled={isPreview} /> : null}
           </>
         )}
       </main>

@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowDownRight,
   Calendar,
+  Filter,
   MousePointerClick,
   ScrollText,
   User,
@@ -132,6 +133,67 @@ export function Tracking() {
       emails,
       paymentClicks,
     }
+  }, [events])
+
+  // Funil de conversão: visitante → protocolo → diagnóstico → e-mail → resultado → pagamento
+  const funnel = useMemo(() => {
+    const step = (label: string, key: 'visitors' | 'protocolPage' | 'diagStart' | 'email' | 'diagResult' | 'payment', predicate: (e: TrackingEvent) => boolean) => {
+      const set = new Set<string>()
+      for (const e of events) {
+        if (predicate(e)) set.add(e.visitor_id)
+      }
+      return { label, key, count: set.size }
+    }
+    const steps = [
+      step('Visitantes', 'visitors', (e) => e.event === 'page_view'),
+      step('Chegaram ao Protocolo', 'protocolPage', (e) => e.event === 'page_view' && e.path.split('?')[0] === '/protocolo'),
+      step('Iniciaram o diagnóstico', 'diagStart', (e) => e.event === 'diagnostic_start' || e.event === 'diagnostic_resume'),
+      step('Informaram e-mail', 'email', (e) => e.event === 'email_capture'),
+      step('Concluíram o diagnóstico', 'diagResult', (e) => e.event === 'diagnostic_result'),
+      step('Clicaram no pagamento', 'payment', (e) => e.event === 'payment_click'),
+    ]
+    const first = steps[0].count || 1
+    return steps.map((s, i) => {
+      const prev = i === 0 ? null : steps[i - 1].count
+      const conversion = Math.round((s.count / first) * 100)
+      const dropFromPrev = prev && prev > 0 ? Math.round(((prev - s.count) / prev) * 100) : null
+      return { ...s, conversion, dropFromPrev }
+    })
+  }, [events])
+
+  // Abandono por pergunta do questionário (item 5)
+  const questionFunnel = useMemo(() => {
+    const startSet = new Set<string>() // quem iniciou
+    const answersByVisitor = new Map<string, number[]>() // perguntas respondidas por visitante
+    const resultSet = new Set<string>() // quem concluiu
+
+    for (const e of events) {
+      if (e.event === 'diagnostic_start' || e.event === 'diagnostic_resume') startSet.add(e.visitor_id)
+      if (e.event === 'diagnostic_answer') {
+        const q = (e.detail as { question?: number } | null)?.question ?? 0
+        const arr = answersByVisitor.get(e.visitor_id) ?? []
+        arr.push(q)
+        answersByVisitor.set(e.visitor_id, arr)
+      }
+      if (e.event === 'diagnostic_result') resultSet.add(e.visitor_id)
+    }
+
+    // Por pergunta: quantos responderam e quantos NÃO seguiram para a próxima nem concluíram.
+    const rows = []
+    for (let i = 1; i <= 5; i++) {
+      let answered = 0
+      let dropped = 0
+      for (const [visitor, qs] of answersByVisitor) {
+        if (!qs.includes(i)) continue
+        answered++
+        const wentFurther = i < 5 ? qs.includes(i + 1) : false
+        if (!wentFurther && !resultSet.has(visitor)) dropped++
+      }
+      rows.push({ question: i, answered, dropped })
+    }
+    const completed = resultSet.size
+    const started = startSet.size
+    return { started, completed, rows }
   }, [events])
 
   // Visitas e conversões por link de origem (?ref=)
@@ -363,6 +425,55 @@ export function Tracking() {
             </div>
           </div>
 
+          {/* ─── FUNIL DE CONVERSÃO ─── */}
+          <div className="card mt-6 overflow-hidden">
+            <div className="border-b border-ink/5 px-5 py-4">
+              <h2 className="font-display text-lg font-semibold text-ink">
+                Funil de conversão
+              </h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Visitante → início → andamento → conclusão. Percentual sobre o total de
+                visitantes.
+              </p>
+            </div>
+            <div className="space-y-3 px-5 py-5">
+              {funnel.map((s, i) => {
+                const width = Math.max(4, s.conversion)
+                return (
+                  <div key={s.key} className="flex items-center gap-3">
+                    <div className="w-40 shrink-0 text-right text-xs font-medium text-ink">
+                      {fmtInt(s.count)}
+                      <span className="ml-1 text-[10px] font-normal text-ink-muted">
+                        {s.conversion}%
+                      </span>
+                    </div>
+                    <div className="h-6 flex-1 overflow-hidden rounded-lg bg-se-mist">
+                      <div
+                        className={`flex h-full items-center overflow-hidden rounded-lg whitespace-nowrap px-3 text-[11px] font-semibold text-white ${
+                          i === funnel.length - 1 ? 'bg-gradient-to-r from-se-teal to-se-violet' : 'bg-se-violet/70'
+                        }`}
+                        style={{ width: `${width}%`, minWidth: '90px' }}
+                      >
+                        {s.label}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="border-t border-ink/5 px-5 py-3 text-xs text-ink-muted">
+              {funnel.map((s, i) =>
+                i > 0 && s.dropFromPrev !== null ? (
+                  <span key={s.key}>
+                    {i > 1 && <span className="mx-1 inline-block text-ink/20">•</span>}
+                    <strong className="text-se-violet">{s.dropFromPrev}%</strong> desistiram entre
+                    "{funnel[i - 1].label}" e "{s.label}"
+                  </span>
+                ) : null,
+              )}
+            </div>
+          </div>
+
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             {/* ─── POR LINK ─── */}
             <div className="card overflow-hidden">
@@ -505,6 +616,90 @@ export function Tracking() {
                       </tr>
                     ))}
                   </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ─── ABANDONO POR PERGUNTA ─── */}
+          <div className="card mt-6 overflow-hidden">
+            <div className="border-b border-ink/5 px-5 py-4">
+              <h2 className="font-display text-lg font-semibold text-ink">
+                Abandono no questionário
+              </h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Quantas pessoas chegaram a cada pergunta e quantas desistiram antes de
+                avançar. Visita com maior desistência vira prioridade de revisão.
+              </p>
+            </div>
+            {questionFunnel.started === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-ink-muted">
+                Nenhum diagnóstico iniciado no período.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
+                      <th className="px-5 py-3 font-semibold">Pergunta</th>
+                      <th className="px-3 py-3 font-semibold">Responderam</th>
+                      <th className="px-3 py-3 font-semibold">Desistiram antes da próxima</th>
+                      <th className="px-5 py-3 font-semibold">Barra de desistência</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      // destaca a pergunta com MAIOR desistência
+                      const maxDropped = Math.max(...questionFunnel.rows.map((r) => r.dropped), 0)
+                      return questionFunnel.rows.map((row) => {
+                        const pct = questionFunnel.started > 0 ? Math.round((row.dropped / questionFunnel.started) * 100) : 0
+                        const worst = maxDropped > 0 && row.dropped === maxDropped
+                        return (
+                          <tr key={row.question} className="border-b border-ink/5 last:border-b-0">
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-ink">Pergunta {row.question}</span>
+                                {worst && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                    <Filter className="h-2.5 w-2.5" /> Maior desistência
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 text-ink-soft">{fmtInt(row.answered)}</td>
+                            <td className="px-3 py-3 text-ink-soft">
+                              <span className="font-semibold text-se-violet">{fmtInt(row.dropped)}</span>
+                              <span className="ml-1 text-xs text-ink-muted">({pct}%)</span>
+                            </td>
+                            <td className="px-5 py-3">
+                              <div className="h-2 w-40 overflow-hidden rounded-full bg-se-mist">
+                                <div
+                                  className={`h-full rounded-full ${worst ? 'bg-red-400' : 'bg-se-violet/50'}`}
+                                  style={{ width: `${Math.max(row.dropped > 0 ? 6 : 0, pct)}%` }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    })()}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-ink/5">
+                      <td className="px-5 py-3 text-xs font-medium text-ink">
+                        Iniciaram: {fmtInt(questionFunnel.started)}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-ink-muted">Concluíram: {fmtInt(questionFunnel.completed)}</td>
+                      <td className="px-3 py-3 text-xs text-ink-muted">
+                        Taxa de conclusão:{' '}
+                        {questionFunnel.started > 0
+                          ? Math.round((questionFunnel.completed / questionFunnel.started) * 100)
+                          : 0}
+                        %
+                      </td>
+                      <td className="px-5 py-3" />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
             )}

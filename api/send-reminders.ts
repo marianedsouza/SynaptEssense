@@ -23,6 +23,16 @@ interface ScheduledSession {
   reminder_count: number
 }
 
+interface TrackingEvent {
+  id: string
+  visitor_id: string
+  event: string
+  ref: string | null
+  path: string
+  detail: { email?: string } | null
+  created_at: string
+}
+
 function setJson(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' })
   res.end(JSON.stringify(body))
@@ -125,6 +135,26 @@ function paymentEmailHtml(opts: {
     ${ctaButton('Concluir meu pagamento', `${opts.siteUrl}/minha-area`)}
     <p style="margin:0 0 16px;color:${COLORS.muted};font-size:13px;line-height:1.6;">
       Se tiver qualquer dúvida ou quiser ajustar algo, é só responder este e-mail — ficaremos felizes em te ajudar.
+    </p>
+    <p style="margin:0;color:${COLORS.ink};font-size:14px;line-height:1.6;">
+      Com carinho,<br/><strong>${opts.analystName}</strong><br/><span style="color:${COLORS.muted};font-size:12px;">Equipe SynaptEssence360®</span>
+    </p>`
+}
+
+function diagReminderEmailHtml(opts: {
+  name: string
+  siteUrl: string
+  analystName: string
+}): string {
+  return `
+    <p style="margin:0 0 16px;color:${COLORS.ink};font-size:16px;line-height:1.6;">${opts.name}, percebemos que você começou seu diagnóstico de momento e ainda não finalizou.</p>
+    <p style="margin:0 0 16px;color:${COLORS.ink};font-size:14px;line-height:1.6;">
+      São apenas 5 perguntas — e é com elas que entendemos qual caminho faz mais sentido para o seu momento.
+      Você pode continuar de onde parou, retomando exatamente onde estava.
+    </p>
+    ${ctaButton('Continuar meu diagnóstico', `${opts.siteUrl}/protocolo?diagnostico=1`)}
+    <p style="margin:0 0 16px;color:${COLORS.muted};font-size:13px;line-height:1.6;">
+      Se você já concluiu o diagnóstico, por favor desconsidere esta mensagem.
     </p>
     <p style="margin:0;color:${COLORS.ink};font-size:14px;line-height:1.6;">
       Com carinho,<br/><strong>${opts.analystName}</strong><br/><span style="color:${COLORS.muted};font-size:12px;">Equipe SynaptEssence360®</span>
@@ -414,7 +444,100 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       sessionReminders += 1
     }
 
-    return setJson(res, 200, { ok: true, paymentReminders, sessionReminders, tomorrow })
+    // --- 3) Lembrete de diagnóstico iniciado mas não concluído ---
+    // Quem informou o e-mail no diagnóstico (?protocolo) mas não chegou ao resultado.
+    const graceDiagDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString() // só após 1h da captura
+    const diagCapturesUrl = buildUrl(supabaseUrl, '/rest/v1/tracking_events', {
+      select: 'id,visitor_id,ref,path,detail,created_at',
+      'event': 'eq.email_capture',
+      'created_at': `lt.${graceDiagDate}`,
+      'order': 'created_at.asc',
+    }).toString()
+    const diagCapturesRes = await fetch(diagCapturesUrl, { headers })
+    const diagCaptures: TrackingEvent[] = diagCapturesRes.ok
+      ? requireJson(await diagCapturesRes.text(), [])
+      : []
+
+    let diagReminders = 0
+    // Agrupa capturas por e-mail (a mesma pessoa pode ter revisitado o site)
+    const diagByEmail = new Map<string, TrackingEvent>()
+    for (const ev of diagCaptures) {
+      const email = ev.detail?.email?.trim().toLowerCase()
+      if (!email) continue
+      const prev = diagByEmail.get(email)
+      if (!prev || ev.created_at > prev.created_at) diagByEmail.set(email, ev)
+    }
+
+    for (const [email, ev] of diagByEmail) {
+      // Já lembrado antes? (evento diag_reminder_sent registrado em execução anterior)
+      const sentUrl = buildUrl(supabaseUrl, '/rest/v1/tracking_events', {
+        select: 'id',
+        'event': 'eq.diag_reminder_sent',
+        'detail->>email': `eq.${email}`,
+        'limit': '1',
+      }).toString()
+      const sentRes = await fetch(sentUrl, { headers })
+      const alreadySent = sentRes.ok ? (requireJson(await sentRes.text(), []) as TrackingEvent[]).length > 0 : false
+      if (alreadySent) continue
+
+      // Esse visitante chegou ao resultado do diagnóstico em algum momento?
+      const resultUrl = buildUrl(supabaseUrl, '/rest/v1/tracking_events', {
+        select: 'id',
+        'visitor_id': `eq.${ev.visitor_id}`,
+        'event': 'eq.diagnostic_result',
+        'limit': '1',
+      }).toString()
+      const resultRes = await fetch(resultUrl, { headers })
+      const finished = resultRes.ok ? (requireJson(await resultRes.text(), []) as TrackingEvent[]).length > 0 : false
+      if (finished) continue // já concluiu — não lembra
+
+      const html = wrapEmail(
+        diagReminderEmailHtml({
+          name: 'Olá',
+          siteUrl,
+          analystName,
+        }),
+        'Você começou seu diagnóstico — pode continuar de onde parou.',
+      )
+      const text = plainText([
+        'Você começou seu diagnóstico SynaptEssence360® e ainda não o finalizou.',
+        '',
+        'São apenas 5 perguntas. Continue de onde parou:',
+        `${siteUrl}/protocolo?diagnostico=1`,
+        '',
+        'Já concluiu? Desconsidere esta mensagem.',
+        '',
+        `Com carinho, ${analystName} — ${COMPANY_TAGLINE}`,
+      ])
+
+      const ok = await sendEmail({
+        to: email,
+        from,
+        apiKey: resendApiKey,
+        subject: 'Seu diagnóstico espera por você — são só 5 perguntas',
+        text,
+        html,
+      })
+      if (!ok) continue
+
+      // Marca como lembrado para não reenviar na próxima execução do cron
+      await fetch(buildUrl(supabaseUrl, '/rest/v1/tracking_events', {}).toString(), {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          visitor_id: ev.visitor_id,
+          session_id: null,
+          ref: ev.ref,
+          path: ev.path,
+          event: 'diag_reminder_sent',
+          detail: { email },
+          created_at: new Date().toISOString(),
+        }),
+      })
+      diagReminders += 1
+    }
+
+    return setJson(res, 200, { ok: true, paymentReminders, sessionReminders, diagReminders, tomorrow })
   } catch (err) {
     console.error('send-reminders error:', err)
     return setJson(res, 500, { error: 'Erro interno ao enviar lembretes.' })

@@ -86,6 +86,15 @@ function fmtPrice(value?: string) {
 }
 
 const EMAIL_STEP_KEY = 'synapt_diag_email_step' // 'done' = já viu a etapa de e-mail
+const PROGRESS_KEY = 'synapt_diag_progress' // retomada automática (item 12)
+
+interface DiagProgress {
+  answers: (number | null)[]
+  currentQuestion: number
+  showResult: boolean
+  recommendation: 'social' | 'transition' | 'integral'
+  updatedAt: number
+}
 
 function emailStepDone(): boolean {
   try {
@@ -100,6 +109,46 @@ function markEmailStepDone() {
     localStorage.setItem(EMAIL_STEP_KEY, 'done')
   } catch {
     // storage indisponível — a etapa aparece de novo, sem quebrar nada
+  }
+}
+
+function loadDiagProgress(): DiagProgress | null {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<DiagProgress>
+    if (!Array.isArray(parsed.answers) || parsed.answers.length !== 5) return null
+    return {
+      answers: parsed.answers as (number | null)[],
+      currentQuestion:
+        typeof parsed.currentQuestion === 'number' && parsed.currentQuestion >= 0 && parsed.currentQuestion <= 4
+          ? parsed.currentQuestion
+          : 0,
+      showResult: parsed.showResult === true,
+      recommendation:
+        parsed.recommendation === 'transition' || parsed.recommendation === 'integral'
+          ? parsed.recommendation
+          : 'social',
+      updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0,
+    }
+  } catch {
+    return null
+  }
+}
+
+function saveDiagProgress(progress: Omit<DiagProgress, 'updatedAt'>) {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify({ ...progress, updatedAt: Date.now() }))
+  } catch {
+    // storage indisponível — segue sem retomada
+  }
+}
+
+function clearDiagProgress() {
+  try {
+    localStorage.removeItem(PROGRESS_KEY)
+  } catch {
+    // não faz nada
   }
 }
 
@@ -124,8 +173,27 @@ export function Protocol() {
     navigate(`/pagamento?modalidade=${modality}&plano=${plano}`)
   }
 
-  /** Abre o diagnóstico: mostra a etapa de e-mail (uma vez por visitante) antes das perguntas. */
+  /** Abre o diagnóstico: mostra a etapa de e-mail (uma vez por visitante) antes das perguntas.
+   * Se houver progresso salvo (retomada automática), restaura exatamente onde parou. */
   function openDiagnostic() {
+    const saved = loadDiagProgress()
+    if (saved && saved.answers.some((a) => a !== null)) {
+      setAnswers(saved.answers)
+      setCurrentQuestion(saved.currentQuestion)
+      setShowResult(saved.showResult)
+      setRecommendation(saved.recommendation)
+      setEmailError('')
+      setShowEmailStep(false)
+      setShowDiagnostic(true)
+      track('diagnostic_resume', {
+        detail: {
+          at_question: saved.showResult ? null : saved.currentQuestion + 1,
+          answered: saved.answers.filter((a) => a !== null).length,
+          finished: saved.showResult,
+        },
+      })
+      return
+    }
     setCurrentQuestion(0)
     setAnswers([null, null, null, null, null])
     setShowResult(false)
@@ -159,7 +227,12 @@ export function Protocol() {
   }
 
   function closeDiagnostic() {
-    if (!showResult && currentQuestion >= 0 && answers.some((a) => a !== null)) {
+    if (showResult) {
+      // Concluiu: limpa o progresso salvo para que a próxima abertura comece do início
+      clearDiagProgress()
+    } else if (currentQuestion >= 0 && answers.some((a) => a !== null)) {
+      // Salva progresso para retomada automática (item 12)
+      saveDiagProgress({ answers, currentQuestion, showResult, recommendation })
       track('diagnostic_abandon', {
         detail: { at_question: currentQuestion + 1, answered: answers.filter((a) => a !== null).length },
       })
@@ -179,6 +252,7 @@ export function Protocol() {
     const newAnswers = [...answers]
     newAnswers[currentQuestion] = value
     setAnswers(newAnswers)
+    saveDiagProgress({ answers: newAnswers, currentQuestion, showResult, recommendation })
     track('diagnostic_answer', {
       detail: { question: currentQuestion + 1, value },
     })
@@ -186,11 +260,14 @@ export function Protocol() {
 
   function handleNext() {
     if (currentQuestion < 4) {
-      setCurrentQuestion(currentQuestion + 1)
+      const next = currentQuestion + 1
+      setCurrentQuestion(next)
+      saveDiagProgress({ answers, currentQuestion: next, showResult, recommendation })
     } else {
       const rec = calculateRecommendation()
       setRecommendation(rec)
       setShowResult(true)
+      saveDiagProgress({ answers, currentQuestion, showResult: true, recommendation: rec })
       track('diagnostic_result', {
         detail: { recommendation: rec, score: answers.reduce<number>((sum, a) => sum + (a ?? 0), 0) },
       })
@@ -199,11 +276,15 @@ export function Protocol() {
 
   function handlePrev() {
     if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1)
+      const prev = currentQuestion - 1
+      setCurrentQuestion(prev)
+      saveDiagProgress({ answers, currentQuestion: prev, showResult, recommendation })
     }
   }
 
   function scrollToModalities(card: 'social' | 'integral') {
+    // Ao sair pelo resultado, o diagnóstico foi concluído — limpa progresso p/ próxima vinda
+    if (showResult) clearDiagProgress()
     setShowDiagnostic(false)
     setShowResult(false)
     setHighlightedCard(card)

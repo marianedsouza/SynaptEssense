@@ -16,8 +16,10 @@ export type TrackEventType =
   | 'diagnostic_abandon'
   | 'diagnostic_result'
   | 'diagnostic_skip_email'
+  | 'diagnostic_resume'
   | 'email_capture'
   | 'payment_click'
+  | 'diag_reminder_sent'
 
 interface QueuedEvent {
   visitor_id: string

@@ -60,6 +60,27 @@ function fmtDuration(ms: number | null | undefined) {
   return `${m}min${rest > 0 ? ` ${rest}s` : ''}`
 }
 
+function fmtSpan(ms: number | null | undefined) {
+  if (!ms || ms <= 0) return '—'
+  const mins = Math.round(ms / 60000)
+  if (mins < 60) return `${mins}min`
+  if (mins < 60 * 48) {
+    const h = Math.floor(mins / 60)
+    const rest = mins % 60
+    return `${h}h${rest > 0 ? ` ${rest}min` : ''}`
+  }
+  const days = Math.floor(mins / (60 * 24))
+  const restH = Math.floor((mins % (60 * 24)) / 60)
+  return `${days}d${restH > 0 ? ` ${restH}h` : ''}`
+}
+
+function median(nums: number[]): number | null {
+  if (nums.length === 0) return null
+  const sorted = [...nums].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+}
+
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit',
@@ -143,46 +164,82 @@ export function Tracking() {
     return Array.from(set).sort()
   }, [events])
 
-  // Funil de conversão (item 6): etapas contabilizadas por visitante único.
-  // É possível focar em uma única origem (?ref=) para comparar campanhas.
+  // Funil de conversão (item 6) — lógica aninhada:
+  // cada etapa só conta quem completou TODAS as anteriores no período (funil
+  // aberto, por visitante único). Assim as barras nunca sobem e as taxas
+  // medem o que realmente importa: de X que chegaram, quantos seguiram.
   const funnelEvents = useMemo(() => {
     if (funnelRef === 'all') return events
     return events.filter((e) => (e.ref ?? null) === (funnelRef === 'direct' ? null : funnelRef))
   }, [events, funnelRef])
 
   const funnel = useMemo(() => {
-    const step = (label: string, key: 'visitors' | 'protocolPage' | 'diagStart' | 'email' | 'diagResult' | 'payment', predicate: (e: TrackingEvent) => boolean) => {
-      const set = new Set<string>()
-      for (const e of funnelEvents) {
-        if (predicate(e)) set.add(e.visitor_id)
-      }
-      return { label, key, count: set.size }
-    }
-    const steps = [
-      step('Visitantes', 'visitors', (e) => e.event === 'page_view'),
-      step('Chegaram ao Protocolo', 'protocolPage', (e) => e.event === 'page_view' && e.path.split('?')[0] === '/protocolo'),
-      step('Iniciaram o diagnóstico', 'diagStart', (e) => e.event === 'diagnostic_start' || e.event === 'diagnostic_resume'),
-      step('Informaram e-mail', 'email', (e) => e.event === 'email_capture'),
-      step('Concluíram o diagnóstico', 'diagResult', (e) => e.event === 'diagnostic_result'),
-      step('Clicaram no pagamento', 'payment', (e) => e.event === 'payment_click'),
+    const defs = [
+      { key: 'visitors', label: 'Visitantes', match: (e: TrackingEvent) => e.event === 'page_view' },
+      { key: 'start', label: 'Iniciaram o diagnóstico', match: (e: TrackingEvent) => e.event === 'diagnostic_start' || e.event === 'diagnostic_resume' },
+      { key: 'email', label: 'Deixaram o e-mail', match: (e: TrackingEvent) => e.event === 'email_capture' },
+      { key: 'result', label: 'Concluíram o diagnóstico', match: (e: TrackingEvent) => e.event === 'diagnostic_result' },
+      { key: 'payment', label: 'Clicaram no pagamento', match: (e: TrackingEvent) => e.event === 'payment_click' },
     ]
-    const first = steps[0].count || 1
-    return steps.map((s, i) => {
-      const prev = i === 0 ? null : steps[i - 1].count
-      const conversion = Math.round((s.count / first) * 100)
-      const stepConv = prev && prev > 0 ? Math.round((s.count / prev) * 100) : null
-      const drop = prev != null ? prev - s.count : null
-      const dropPct = prev && prev > 0 && s.count < prev ? Math.round(((prev - s.count) / prev) * 100) : 0
-      return { ...s, conversion, stepConv, drop, dropPct }
+    // Primeira ocorrência de cada etapa por visitante (MIN por etapa)
+    const firstByVisitor = new Map<string, (number | null)[]>()
+    for (const e of funnelEvents) {
+      const d = defs.find((x) => x.match(e))
+      if (!d) continue
+      let arr = firstByVisitor.get(e.visitor_id)
+      if (!arr) {
+        arr = Array(defs.length).fill(null)
+        firstByVisitor.set(e.visitor_id, arr)
+      }
+      const t = new Date(e.created_at).getTime()
+      const i = defs.indexOf(d)
+      if (arr[i] === null || t < (arr[i] as number)) arr[i] = t
+    }
+
+    const counts = Array(defs.length).fill(0) as number[]
+    const times = Array.from({ length: defs.length }, () => []) as number[][]
+    for (const arr of firstByVisitor.values()) {
+      if (arr[0] === null) continue // entra no funil só quem visitou o site (topo)
+      for (let k = 0; k < defs.length && arr[k] !== null; k++) counts[k]++
+      for (let k = 1; k < defs.length; k++) {
+        if (arr[k - 1] !== null && arr[k] !== null) {
+          const dt = (arr[k] as number) - (arr[k - 1] as number)
+          if (dt > 0) times[k].push(dt)
+        }
+      }
+    }
+
+    const top = counts[0] || 1
+    return defs.map((d, i) => {
+      const prev = i === 0 ? null : counts[i - 1]
+      const conversion = Math.round((counts[i] / top) * 100)
+      const stepConv = prev && prev > 0 ? Math.round((counts[i] / prev) * 100) : null
+      const drop = prev != null ? prev - counts[i] : null
+      const dropRate = drop !== null && prev && prev > 0 ? Math.round((drop / prev) * 100) : null
+      const medianMs = i === 0 ? null : median(times[i])
+      return { key: d.key, label: d.label, count: counts[i], conversion, stepConv, drop, dropRate, medianMs }
     })
   }, [funnelEvents])
 
+  // Gargalo com maior perda absoluta (impacto) e com menor conversão (taxa)
   const worstDropKey = useMemo(() => {
     let key: string | null = null
     let max = 0
     for (const s of funnel) {
-      if (s.key !== 'visitors' && s.drop !== null && s.drop > max) {
+      if (s.drop !== null && s.drop > max) {
         max = s.drop
+        key = s.key
+      }
+    }
+    return key
+  }, [funnel])
+
+  const worstRateKey = useMemo(() => {
+    let key: string | null = null
+    let lowest = 101
+    for (const s of funnel) {
+      if (s.key !== 'visitors' && s.stepConv !== null && s.stepConv < lowest) {
+        lowest = s.stepConv
         key = s.key
       }
     }
@@ -461,8 +518,8 @@ export function Tracking() {
                   Funil de conversão
                 </h2>
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  Etapas da jornada, contadas por visitante único. A conversão de cada
-                  etapa é sobre quem chegou na etapa anterior.
+                  Cada etapa conta quem completou todas as anteriores (funil aberto,
+                  visitante único, no período selecionado).
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -486,79 +543,147 @@ export function Tracking() {
                 Nenhuma visita nesta origem no período.
               </div>
             ) : (
-              <div className="space-y-2.5 px-5 py-5">
-                {funnel.map((s, i) => {
-                  const width = Math.max(6, s.conversion)
-                  const isWorst = s.key === worstDropKey
-                  return (
-                    <div key={s.key} className="rounded-xl border border-ink/5 bg-se-mist/40 p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-28 shrink-0 text-right">
-                          <div className="font-display text-lg font-semibold text-ink">
-                            {fmtInt(s.count)}
-                          </div>
-                          <div className="text-[10px] text-ink-muted">{s.conversion}% do total</div>
+              <div className="px-5 py-5">
+                {/* Insights */}
+                <div className="mb-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+                      Conversão geral
+                    </div>
+                    <div className="mt-1 font-display text-2xl font-semibold text-se-violet">
+                      {funnel[funnel.length - 1].conversion}%
+                    </div>
+                    <div className="mt-1 text-[11px] text-ink-muted">
+                      {fmtInt(funnel[funnel.length - 1].count)} chegaram ao pagamento
+                    </div>
+                  </div>
+                  {worstRateKey && (() => {
+                    const gi = funnel.findIndex((s) => s.key === worstRateKey)
+                    return (
+                      <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+                          Maior gargalo (taxa)
                         </div>
-                        <div className="h-8 flex-1 overflow-hidden rounded-lg bg-se-mist">
-                          <div
-                            className={`flex h-full items-center overflow-hidden rounded-lg whitespace-nowrap px-3 text-[11px] font-semibold text-white ${
-                              i === funnel.length - 1
-                                ? 'bg-gradient-to-r from-se-teal to-se-violet'
-                                : 'bg-se-violet/70'
-                            }`}
-                            style={{ width: `${width}%`, minWidth: '110px' }}
-                          >
-                            {s.label}
-                          </div>
+                        <div className="mt-1 font-display text-lg font-semibold text-red-600">
+                          {funnel[gi].stepConv}%
                         </div>
-                        <div className="w-28 shrink-0 text-left">
-                          {i === 0 ? (
-                            <span className="inline-flex rounded-full bg-se-lavender px-2.5 py-1 text-xs font-semibold text-se-violet">
-                              Base
-                            </span>
-                          ) : (
-                            <>
-                              <span className="inline-flex items-center gap-0.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-ink">
-                                {s.stepConv !== null ? `${s.stepConv}%` : '—'}
-                              </span>
-                              <div className="mt-0.5 text-[10px] text-ink-muted">dos anteriores</div>
-                            </>
-                          )}
+                        <div className="mt-1 text-[11px] text-ink-muted">
+                          só seguiram de "{funnel[gi - 1]?.label}" para "{funnel[gi].label}"
                         </div>
                       </div>
-                      {i > 0 && s.drop !== null && (
-                        <div className="mt-1.5 flex items-center gap-2 pl-[7rem]">
-                          {s.drop > 0 ? (
-                            <span className="text-xs text-ink-muted">
-                              <strong className={isWorst ? 'text-red-600' : 'text-se-violet'}>
-                                −{fmtInt(s.drop)}
-                              </strong>{' '}
-                              {s.drop === 1 ? 'desistiu' : 'desistiram'} (−{s.dropPct}% vs. anterior)
-                              {isWorst && (
-                                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                  <ArrowDownRight className="h-2.5 w-2.5" /> Maior desistência
+                    )
+                  })()}
+                  {worstDropKey && (() => {
+                    const di = funnel.findIndex((s) => s.key === worstDropKey)
+                    return (
+                      <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+                          Maior perda (pessoas)
+                        </div>
+                        <div className="mt-1 font-display text-lg font-semibold text-ink">
+                          −{fmtInt(funnel[di].drop ?? 0)}
+                        </div>
+                        <div className="mt-1 text-[11px] text-ink-muted">
+                          entre "{funnel[di - 1]?.label}" e "{funnel[di].label}"
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
+                      Tempo mediano até o pagamento
+                    </div>
+                    <div className="mt-1 font-display text-lg font-semibold text-ink">
+                      {fmtSpan(funnel[funnel.length - 1].medianMs)}
+                    </div>
+                    <div className="mt-1 text-[11px] text-ink-muted">
+                      do início ao clique no pagamento
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {funnel.map((s, i) => {
+                    const width = Math.max(6, s.conversion)
+                    const isWorstAbs = s.key === worstDropKey
+                    const isWorstRate = s.key === worstRateKey
+                    return (
+                      <div key={s.key} className="rounded-xl border border-ink/5 bg-se-mist/40 p-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-20 shrink-0 text-right">
+                            <div className="font-display text-lg font-semibold text-ink">
+                              {fmtInt(s.count)}
+                            </div>
+                            <div className="text-[10px] text-ink-muted">{s.conversion}%</div>
+                          </div>
+                          <div className="h-8 flex-1 overflow-hidden rounded-lg bg-se-mist">
+                            <div
+                              className={`flex h-full items-center overflow-hidden rounded-lg whitespace-nowrap px-3 text-[11px] font-semibold text-white ${
+                                i === funnel.length - 1
+                                  ? 'bg-gradient-to-r from-se-teal to-se-violet'
+                                  : 'bg-se-violet/70'
+                              }`}
+                              style={{ width: `${width}%`, minWidth: '110px' }}
+                            >
+                              {s.label}
+                            </div>
+                          </div>
+                          <div className="w-32 shrink-0 text-left">
+                            {i === 0 ? (
+                              <span className="inline-flex rounded-full bg-se-lavender px-2.5 py-1 text-xs font-semibold text-se-violet">
+                                Base
+                              </span>
+                            ) : (
+                              <>
+                                <span className="inline-flex items-center gap-0.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-ink">
+                                  {s.stepConv !== null ? `${s.stepConv}%` : '—'}
                                 </span>
+                                <div className="mt-0.5 text-[10px] text-ink-muted">dos anteriores</div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {i > 0 && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[5.5rem]">
+                            <span className="text-xs text-ink-muted">
+                              {s.drop !== null && s.drop > 0 ? (
+                                <>
+                                  <strong className={isWorstAbs ? 'text-red-600' : 'text-se-violet'}>
+                                    −{fmtInt(s.drop)}
+                                  </strong>{' '}
+                                  {s.drop === 1 ? 'desistiu' : 'desistiram'} (−{s.dropRate}%)
+                                  {isWorstAbs && (
+                                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                      <ArrowDownRight className="h-2.5 w-2.5" /> Maior desistência
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                'Sem queda'
                               )}
                             </span>
-                          ) : s.drop < 0 ? (
-                            <span className="text-xs text-amber-600">
-                              +{fmtInt(-s.drop)} retomaram aqui (volta por link direto)
-                            </span>
-                          ) : (
-                            <span className="text-xs text-ink-muted">Sem queda nesta etapa</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                            {s.medianMs !== null && (
+                              <span className="text-[11px] text-ink-muted">
+                                Mediana de {fmtSpan(s.medianMs)} até a próxima etapa
+                              </span>
+                            )}
+                            {isWorstRate && i > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                Gargalo de conversão
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
             <div className="border-t border-ink/5 px-5 py-3 text-xs text-ink-muted">
-              Conversão geral:{' '}
-              <strong className="text-se-violet">{funnel[0].count > 0 ? funnel[funnel.length - 1].conversion : 0}%</strong>{' '}
-              dos visitantes clicaram no pagamento no período. Use o filtro de origem para
-              comparar campanhas.
+              Lógica: cada visitante conta 1× apenas se percorreu <strong>todas</strong> as etapas
+              anteriores até a barra (funil aberto, no período). Barra = % sobre o topo. Badge à
+              direita = conversão sobre a etapa anterior. Use o filtro de origem para comparar campanhas.
             </div>
           </div>
 

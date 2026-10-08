@@ -127,13 +127,6 @@ const FUNNEL_ACTIONS: Record<string, string> = {
   payment: 'aproxime o CTA de pagamento da tela de resultado — concluem mas não clicam em pagar.',
 }
 
-// Nomes curtos para os rótulos das colunas do funil
-const FUNNEL_SHORT: Record<string, string> = {
-  visitors: 'Visitantes',
-  start: 'Iniciaram',
-  result: 'Concluíram',
-  payment: 'Pagamento',
-}
 
 export function Tracking() {
   const [period, setPeriod] = useState<Period>('30')

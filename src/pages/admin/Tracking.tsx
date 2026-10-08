@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   ArrowDownRight,
+  ArrowUpRight,
   Calendar,
   Filter,
   Flame,
@@ -928,87 +929,51 @@ export function Tracking() {
                   </div>
                 )}
 
-                <div className="space-y-2.5">
+                {/* Funil: barra central proporcional — largura = % dos visitantes */}
+                <div className="mx-auto flex max-w-2xl flex-col items-center pb-1">
                   {funnel.map((s, i) => {
-                    const width = Math.max(6, Math.min(100, s.conversion))
-                    const isWorstAbs = s.key === worstDropKey
-                    const isWorstRate = s.key === worstRateKey
+                    const width = Math.max(12, Math.min(100, s.conversion))
+                    const last = i === funnel.length - 1
+                    const worst = s.key === worstDropKey || s.key === worstRateKey
                     return (
-                      <div key={s.key} className="rounded-xl border border-ink/5 bg-se-mist/40 p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-20 shrink-0 text-right">
-                            <div className="font-display text-lg font-semibold text-ink">
-                              {fmtInt(s.count)}
-                            </div>
-                            <div className="text-[10px] text-ink-muted">{s.conversion}%</div>
-                          </div>
-                          <div className="h-8 flex-1 overflow-hidden rounded-lg bg-se-mist">
-                            <div
-                              className={`flex h-full items-center overflow-hidden rounded-lg whitespace-nowrap px-3 text-[11px] font-semibold text-white ${
-                                i === funnel.length - 1
-                                  ? 'bg-gradient-to-r from-se-teal to-se-violet'
-                                  : 'bg-se-violet/70'
-                              }`}
-                              style={{ width: `${width}%`, minWidth: '110px' }}
-                            >
-                              {s.label}
-                            </div>
-                          </div>
-                          <div className="w-32 shrink-0 text-left">
-                            {i === 0 ? (
-                              <span className="inline-flex rounded-full bg-se-lavender px-2.5 py-1 text-xs font-semibold text-se-violet">
-                                Base
-                              </span>
-                            ) : (
-                              <>
-                                <span
-                                  className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                    s.gain > 0 ? 'bg-se-teal/10 text-se-teal' : 'bg-white text-ink'
-                                  }`}
-                                >
-                                  {s.gain > 0 ? `+${fmtInt(s.gain)}` : s.stepConv !== null ? `${s.stepConv}%` : '—'}
-                                </span>
-                                <div className="mt-0.5 text-[10px] text-ink-muted">
-                                  {s.gain > 0 ? 'chegaram direto' : 'dos anteriores'}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                      <div key={s.key} className="flex w-full flex-col items-center">
                         {i > 0 && (
-                          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[5.5rem]">
-                            {s.drop > 0 ? (
-                              <span className="text-xs text-ink-muted">
-                                <strong className={isWorstAbs ? 'text-red-600' : 'text-se-violet'}>
-                                  −{fmtInt(s.drop)}
-                                </strong>{' '}
-                                {s.drop === 1 ? 'desistiu' : 'desistiram'} (−{s.dropRate}%)
-                                {isWorstAbs && (
-                                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                    <ArrowDownRight className="h-2.5 w-2.5" /> Maior desistência
-                                  </span>
-                                )}
+                          <div className="my-1.5 flex h-5 items-center" aria-hidden>
+                            {s.gain > 0 ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-se-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-se-teal">
+                                <ArrowUpRight className="h-3 w-3" /> +{fmtInt(s.gain)} chegaram direto
                               </span>
-                            ) : s.gain > 0 ? (
-                              <span className="text-xs text-ink-muted">
-                                <strong className="text-se-teal">+{fmtInt(s.gain)}</strong> sem passar
-                                por “{funnel[i - 1].label}”
+                            ) : s.drop > 0 ? (
+                              <span
+                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                                  worst ? 'bg-red-50 text-red-600' : 'bg-se-mist text-ink-muted'
+                                }`}
+                              >
+                                <ArrowDownRight className="h-3 w-3" />
+                                {fmtInt(s.drop)} {s.drop === 1 ? 'desistiu' : 'desistiram'} · −
+                                {s.dropRate}%
                               </span>
                             ) : (
-                              <span className="text-xs text-ink-muted">Sem queda</span>
-                            )}
-                            {s.medianMs !== null && s.baseLabel && (
-                              <span className="text-[11px] text-ink-muted">
-                                Mediana de {fmtSpan(s.medianMs)} desde “{s.baseLabel}”
-                              </span>
-                            )}
-                            {isWorstRate && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                Gargalo de conversão
+                              <span className="rounded-full bg-se-mist/60 px-2.5 py-0.5 text-[10px] text-ink-muted">
+                                sem perda
                               </span>
                             )}
                           </div>
                         )}
+                        <div
+                          className={`flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-3 text-white ${
+                            last
+                              ? 'bg-gradient-to-r from-se-teal to-se-violet'
+                              : 'bg-se-violet/80'
+                          }`}
+                          style={{ width: `${width}%` }}
+                        >
+                          <span className="max-w-[58%] truncate text-[11px] font-semibold">
+                            {s.label}
+                          </span>
+                          <span className="font-display text-sm font-semibold">{fmtInt(s.count)}</span>
+                          <span className="text-[10px] opacity-80">{s.conversion}%</span>
+                        </div>
                       </div>
                     )
                   })}
@@ -1016,9 +981,9 @@ export function Tracking() {
               </div>
             )}
             <div className="border-t border-ink/5 px-5 py-3 text-xs text-ink-muted">
-              Barra = % sobre os visitantes. Badge à direita = conversão da etapa anterior
-              (<b>+N</b> = chegaram direto, sem passar pela etapa anterior). Filtre a origem para
-              comparar campanhas.
+              Largura de cada barra = % dos visitantes. O rótulo entre as barras indica o que
+              aconteceu ali: perda (<b>−N desistiram</b>) ou chegada direta (<b>+N</b>, sem passar
+              pela etapa anterior). Filtre a origem para comparar campanhas.
             </div>
           </div>
 

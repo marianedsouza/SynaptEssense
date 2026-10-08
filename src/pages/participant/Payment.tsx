@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CreditCard, Shield, Lock, QrCode, Landmark } from 'lucide-react'
+import { ArrowLeft, CreditCard, Shield, Lock, QrCode, Landmark, AlertTriangle } from 'lucide-react'
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { supabase } from '../../lib/supabase'
@@ -76,7 +76,11 @@ export function Payment() {
         },
       })
       if (signUpError) {
-        throw new Error(`Não foi possível criar o acesso: ${signUpError.message}`)
+        if (signUpError.code === 'weak_password' || /password/i.test(signUpError.message)) {
+          throw new Error('A senha precisa ter pelo menos 6 caracteres.')
+        }
+        console.error('signUp falhou:', signUpError)
+        throw new Error('Não foi possível criar seu acesso agora. Tente novamente em instantes.')
       }
       userId = signUpData.user?.id ?? null
 
@@ -103,7 +107,7 @@ export function Payment() {
 
       // 3. Create MercadoPago Checkout Pro preference
       if (!amount || amount <= 0) {
-        throw new Error('Valor do plano não configurado. Informe os valores no painel do analista.')
+        throw new Error('O pagamento desta modalidade ainda não está disponível. Fale com sua analista para regularizar.')
       }
 
       const edgeFunctionUrl = `${supabaseUrl}/functions/v1/create-preference`
@@ -129,36 +133,33 @@ export function Payment() {
         })
       } catch (err) {
         console.error('Fetch create-preference falhou:', err)
-        throw new Error(
-          'Não foi possível conectar ao servidor de pagamento. Verifique se a função ' +
-          'create-preference está publicada no Supabase e se a URL do projeto está correta na variável VITE_SUPABASE_URL.',
-        )
+        throw new Error('Não foi possível conectar ao pagamento. Verifique sua internet e tente novamente.')
       }
 
       let result: Record<string, unknown>
       try {
         result = await response.json()
       } catch {
-        throw new Error(
-          'Resposta inesperada do servidor (código ' + response.status + '). ' +
-          'Confirme que a Edge Function create-preference foi publicada com: supabase functions deploy create-preference',
-        )
+        console.error('create-preference retornou resposta inválida:', response.status)
+        throw new Error('O pagamento não respondeu como esperado. Tente novamente em alguns instantes.')
       }
 
       if (!response.ok) {
-        const errMsg = typeof result.error === 'string' ? result.error : 'Erro ao criar o pagamento.'
-        throw new Error(errMsg)
+        console.error('create-preference erro:', response.status, result)
+        throw new Error('Não foi possível iniciar o pagamento agora. Tente novamente em instantes.')
       }
 
       const initPoint = (typeof result.init_point === 'string' && result.init_point)
         || (typeof result.sandbox_init_point === 'string' && result.sandbox_init_point)
       if (!initPoint) {
-        throw new Error('Não foi possível obter o link de pagamento do Mercado Pago.')
+        console.error('create-preference sem init_point:', result)
+        throw new Error('Não foi possível obter o link de pagamento. Tente novamente em instantes.')
       }
 
       window.location.href = initPoint
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Erro ao iniciar o pagamento.')
+      console.error('create-preference falhou:', err)
+      setErrorMessage(err instanceof Error ? err.message : 'Não foi possível iniciar o pagamento. Tente novamente em instantes.')
       setStep('error')
     }
   }
@@ -170,13 +171,13 @@ export function Payment() {
       <NeuralBackground className="opacity-20 fixed inset-0" />
 
       {/* Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-se-mist/85 px-6 py-4 backdrop-blur-md md:px-12 md:py-6">
         <button onClick={() => navigate('/protocolo')} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
         <button
           onClick={() => navigate('/protocolo')}
-          className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+          className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Voltar
@@ -246,6 +247,7 @@ export function Payment() {
                   <input
                     id="pay-phone"
                     type="tel"
+                    inputMode="tel"
                     className="input"
                     value={values.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
@@ -278,20 +280,25 @@ export function Payment() {
                 Ir para o pagamento
                 <Lock className="h-4 w-4" />
               </button>
+              {!isFormValid && (
+                <p className="mt-2 text-center text-xs text-ink-muted">
+                  Preencha nome, e-mail, WhatsApp e crie uma senha (mínimo 6 caracteres) para continuar.
+                </p>
+              )}
 
               {/* Payment methods hint */}
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/5 bg-se-mist/60 px-2 py-3 text-center">
                   <CreditCard className="h-4 w-4 text-se-violet" />
-                  <span className="text-[10px] font-medium text-ink-muted">Cartão</span>
+                  <span className="text-[11px] font-medium text-ink-muted">Cartão</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/5 bg-se-mist/60 px-2 py-3 text-center">
                   <QrCode className="h-4 w-4 text-se-violet" />
-                  <span className="text-[10px] font-medium text-ink-muted">PIX</span>
+                  <span className="text-[11px] font-medium text-ink-muted">PIX</span>
                 </div>
                 <div className="flex flex-col items-center gap-1.5 rounded-xl border border-ink/5 bg-se-mist/60 px-2 py-3 text-center">
                   <Landmark className="h-4 w-4 text-se-violet" />
-                  <span className="text-[10px] font-medium text-ink-muted">Boleto</span>
+                  <span className="text-[11px] font-medium text-ink-muted">Boleto</span>
                 </div>
               </div>
 
@@ -320,7 +327,7 @@ export function Payment() {
         {step === 'error' && (
           <div className="card p-8 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
-              <span className="text-2xl">⚠️</span>
+              <AlertTriangle className="h-7 w-7 text-red-500" />
             </div>
             <h2 className="mt-6 font-display text-xl font-semibold text-ink">
               Houve um problema

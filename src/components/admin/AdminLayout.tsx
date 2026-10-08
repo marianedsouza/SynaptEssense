@@ -87,35 +87,35 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex flex-1 flex-col md:pl-64">
-        <header className="sticky top-0 z-20 border-b border-ink/5 bg-white/85 px-4 py-2.5 backdrop-blur-md md:hidden">
+        <header className="sticky top-0 z-20 border-b border-ink/5 bg-white/85 px-4 py-2 backdrop-blur-md md:hidden">
           <div className="relative flex items-center justify-center">
-            <Logo size="md" />
+            <Logo size="sm" />
             <button
               onClick={handleLogout}
-              className="absolute right-0 rounded-full p-1.5 text-ink-muted hover:bg-se-mist"
+              className="absolute right-0 rounded-full p-2 text-ink-muted hover:bg-se-mist"
               aria-label="Sair"
             >
               <LogOut className="h-4 w-4" />
             </button>
           </div>
-          <nav className="scrollbar-hide mt-2 flex gap-1 overflow-x-auto">
+          <nav className="scrollbar-hide mt-1.5 flex gap-1 overflow-x-auto">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 end={item.end}
                 className={({ isActive }) =>
-                  `relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-all ${
+                  `relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-all ${
                     isActive
                       ? 'bg-se-lavender text-se-violet-dark'
                       : 'text-ink-soft hover:text-ink'
                   }`
                 }
               >
-                <item.icon className="h-3.5 w-3.5" />
+                <item.icon className="h-4 w-4" />
                 {item.label}
                 {item.badge && unseenCount > 0 && (
-                  <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-se-violet px-1 text-[9px] font-bold text-white">
+                  <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-se-violet px-1 text-[10px] font-bold text-white">
                     {unseenCount}
                   </span>
                 )}

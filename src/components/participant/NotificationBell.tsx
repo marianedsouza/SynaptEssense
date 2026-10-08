@@ -122,14 +122,14 @@ export function NotificationBell({ email }: NotificationBellProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`relative rounded-full border p-2.5 backdrop-blur transition ${
+        className={`relative rounded-full border p-3 backdrop-blur transition ${
           open
             ? 'border-se-violet/30 bg-se-lavender text-se-violet'
             : 'border-ink/10 bg-white/70 text-ink-soft hover:text-ink'
         }`}
         aria-label="Central de notificações"
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-5 w-5" />
         {unread > 0 && (
           <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-se-violet px-1 text-[10px] font-bold text-white">
             {unread > 9 ? '9+' : unread}
@@ -152,9 +152,9 @@ export function NotificationBell({ email }: NotificationBellProps) {
               <button
                 type="button"
                 onClick={handleMarkAll}
-                className="flex items-center gap-1 rounded-full bg-se-mist px-2.5 py-1 text-[11px] font-medium text-ink-soft transition hover:text-ink"
+                className="flex min-h-[38px] items-center gap-1 rounded-full bg-se-mist px-3 py-2 text-xs font-medium text-ink-soft transition hover:text-ink"
               >
-                <CheckCheck className="h-3 w-3" />
+                <CheckCheck className="h-3.5 w-3.5" />
                 Marcar todas
               </button>
             )}
@@ -206,7 +206,7 @@ export function NotificationBell({ email }: NotificationBellProps) {
                           {n.message}
                         </span>
                       )}
-                      <span className="mt-1 block text-[10px] text-ink-muted">
+                      <span className="mt-1 block text-[11px] text-ink-muted">
                         {timeAgo(n.created_at)}
                       </span>
                     </span>
@@ -217,7 +217,7 @@ export function NotificationBell({ email }: NotificationBellProps) {
           </div>
 
           <div className="flex items-center justify-between border-t border-ink/5 px-4 py-2.5">
-            <div className="text-[11px] text-ink-muted">
+            <div className="text-xs text-ink-muted">
               {nativeEnabled ? 'Notificações do navegador ativas' : 'Notificações do navegador'}
             </div>
             <button
@@ -226,13 +226,13 @@ export function NotificationBell({ email }: NotificationBellProps) {
               aria-checked={nativeEnabled}
               onClick={handleToggleNative}
               disabled={nativeEnabled}
-              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors ${
                 nativeEnabled ? 'bg-se-teal' : 'bg-ink/20'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  nativeEnabled ? 'translate-x-6' : 'translate-x-1'
+                className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
+                  nativeEnabled ? 'translate-x-7' : 'translate-x-1'
                 }`}
               />
             </button>

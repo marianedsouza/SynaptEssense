@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowRight,
@@ -41,6 +41,14 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
     text: string
   } | null>(null)
   const [resumeLoading, setResumeLoading] = useState(false)
+  const [showStickyCta, setShowStickyCta] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setShowStickyCta(window.scrollY > 360)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const handleResume = async () => {
     const email = resumeEmail.trim()
@@ -101,7 +109,7 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
       <header className="relative z-10 flex items-center justify-end px-6 py-6 md:px-12">
         <button
           onClick={() => navigate('/minha-area')}
-          className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+          className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
         >
           <User className="h-3.5 w-3.5" />
           Minha área
@@ -115,7 +123,10 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
             Mapeamento Estrat&#233;gico de Desenvolvimento Humano
           </div>
 
-          <div className="mb-8 flex justify-center">
+          <div className="mb-8 flex justify-center md:hidden">
+            <Logo size="lg" />
+          </div>
+          <div className="mb-8 hidden justify-center md:flex">
             <Logo size="xl" />
           </div>
 
@@ -251,7 +262,7 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
         {analystProfile2 && <AnalystCard profile={analystProfile2} compact />}
       </div>
 
-      <footer className="relative z-10 pb-8 text-center">
+      <footer className="relative z-10 pb-28 text-center md:pb-8">
         <div className="space-y-1 text-[11px] uppercase tracking-[0.2em] text-ink-muted">
           <p>A tecnologia organiza dados.</p>
           <p>A metodologia gera compreensão.</p>
@@ -259,13 +270,29 @@ export function Landing({ analystProfile, analystProfile2, heroMessage }: Landin
         </div>
         <a
           href="/admin/login"
-          className="mt-4 inline-block rounded-full border border-ink-muted/30 bg-transparent px-4 py-1.5 text-[10px] text-ink-muted/60 transition hover:border-ink-muted/50 hover:text-ink-muted"
+          className="mt-4 inline-flex min-h-[44px] items-center rounded-full border border-ink-muted/30 bg-transparent px-5 py-2 text-xs text-ink-muted transition hover:border-ink-muted/50 hover:text-ink-muted"
         >
           &#193;rea administrativa
         </a>
       </footer>
 
-      <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2">
+      {showStickyCta && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink/10 bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-md animate-fade-up md:hidden">
+          <button
+            onClick={() => navigate('/protocolo?diagnostico=1')}
+            className="btn-primary w-full"
+          >
+            Iniciar levantamento
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      <div
+        className={`fixed right-5 z-40 flex flex-col items-end gap-2 transition-all duration-300 md:bottom-5 ${
+          showStickyCta ? 'bottom-32' : 'bottom-5'
+        }`}
+      >
         {shareOpen && (
           <>
             <button

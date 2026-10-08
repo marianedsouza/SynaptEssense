@@ -14,9 +14,12 @@ export function AnalystCard({ profile, compact = false }: AnalystCardProps) {
 
   return (
     <>
-      <div
-        className={`card flex items-center gap-5 p-6 cursor-pointer transition hover:shadow-lift ${compact ? 'max-w-md' : ''}`}
+      <button
+        type="button"
         onClick={() => setShowBio(true)}
+        aria-haspopup="dialog"
+        aria-expanded={showBio}
+        className={`card flex w-full items-center gap-5 p-6 text-left cursor-pointer transition hover:shadow-lift ${compact ? 'max-w-md' : ''}`}
       >
         {p.photoUrl ? (
           <img
@@ -47,7 +50,7 @@ export function AnalystCard({ profile, compact = false }: AnalystCardProps) {
             <p className="mt-2 text-sm leading-relaxed text-ink-muted">{p.bio}</p>
           )}
         </div>
-      </div>
+      </button>
 
       {showBio && (
         <div
@@ -86,10 +89,10 @@ export function AnalystCard({ profile, compact = false }: AnalystCardProps) {
               </div>
               <button
                 onClick={() => setShowBio(false)}
-                className="rounded-full p-1.5 text-ink-muted transition hover:bg-se-mist hover:text-ink"
+                className="rounded-full p-2 text-ink-muted transition hover:bg-se-mist hover:text-ink"
                 aria-label="Fechar"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
             {p.bio && (

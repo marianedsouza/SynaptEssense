@@ -273,14 +273,14 @@ export function UserArea() {
     <div className="relative min-h-screen bg-se-mist">
       <NeuralBackground className="opacity-20 fixed inset-0" />
 
-      <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-se-mist/85 px-6 py-4 backdrop-blur-md md:px-12 md:py-6">
         <button onClick={() => (isPreview ? navigate('/admin') : navigate('/'))} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
         {isPreview ? (
           <button
             onClick={() => navigate('/admin')}
-            className="flex items-center gap-1.5 rounded-full border border-se-violet/30 bg-white/80 px-4 py-2 text-xs font-medium text-se-violet backdrop-blur transition hover:bg-se-lavender"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-se-violet/30 bg-white/80 px-4 py-2 text-xs font-medium text-se-violet backdrop-blur transition hover:bg-se-lavender"
           >
             <Eye className="h-3.5 w-3.5" />
             Voltar ao painel
@@ -294,7 +294,7 @@ export function UserArea() {
             </span>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-red-300 hover:text-red-600"
+              className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-red-300 hover:text-red-600"
             >
               <LogOut className="h-3.5 w-3.5" />
               Sair

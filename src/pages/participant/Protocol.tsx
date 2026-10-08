@@ -366,21 +366,21 @@ export function Protocol() {
       <NeuralBackground className="opacity-20 fixed inset-0" />
 
       {/* ─── HEADER ─── */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-se-mist/85 px-6 py-4 backdrop-blur-md md:px-12 md:py-6">
         <button onClick={() => navigate('/')} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/minha-area')}
-            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
           >
             <User className="h-3.5 w-3.5" />
             Minha área
           </button>
           <button
             onClick={() => navigate('/')}
-            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Voltar
@@ -750,8 +750,8 @@ export function Protocol() {
 
       {/* ─── DIAGNOSTIC MODAL ─── */}
       {showDiagnostic && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 backdrop-blur-sm">
-          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto p-8 animate-fade-up">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="card max-h-[88vh] w-full overflow-y-auto p-6 animate-fade-up rounded-b-none sm:max-w-lg sm:rounded-3xl sm:p-8">
             {showEmailStep ? (
               /* ─── ETAPA DE E-MAIL (antes das perguntas) ─── */
               <>
@@ -801,7 +801,7 @@ export function Protocol() {
 
                 <button
                   onClick={handleEmailSkip}
-                  className="mt-4 w-full text-center text-xs text-ink-muted hover:text-ink"
+                  className="mt-4 w-full rounded-lg py-2 text-center text-xs text-ink-muted hover:bg-se-mist hover:text-ink"
                 >
                   Continuar sem e-mail
                 </button>
@@ -822,7 +822,14 @@ export function Protocol() {
                 </div>
 
                 {/* Progress */}
-                <div className="mb-6">
+                <div
+                  className="mb-6"
+                  role="progressbar"
+                  aria-valuemin={1}
+                  aria-valuemax={5}
+                  aria-valuenow={currentQuestion + 1}
+                  aria-label={`Pergunta ${currentQuestion + 1} de 5`}
+                >
                   <div className="flex items-center justify-between text-xs text-ink-muted">
                     <span>{currentQuestion + 1} de 5</span>
                   </div>
@@ -849,7 +856,7 @@ export function Protocol() {
                     <button
                       key={opt.value}
                       onClick={() => handleAnswer(opt.value)}
-                      className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                      className={`flex min-h-[48px] w-full items-center rounded-xl border px-4 py-3 text-left text-sm transition-all ${
                         answers[currentQuestion] === opt.value
                           ? 'border-se-violet bg-se-lavender text-ink'
                           : 'border-ink/10 bg-white text-ink-soft hover:border-se-violet/30'
@@ -861,28 +868,33 @@ export function Protocol() {
                 </div>
 
                 {/* Navigation */}
-                <div className="mt-6 flex items-center justify-between">
+                <div className="mt-6 flex items-center justify-between gap-3">
                   <button
                     onClick={handlePrev}
                     disabled={currentQuestion === 0}
-                    className="flex items-center gap-1 text-sm text-ink-muted transition hover:text-ink disabled:opacity-30"
+                    className="flex min-h-[44px] items-center gap-1 rounded-full px-3.5 text-sm text-ink-muted transition hover:text-ink disabled:opacity-30"
                   >
                     <ArrowLeft className="h-4 w-4" /> Anterior
                   </button>
                   <button
                     onClick={handleNext}
                     disabled={answers[currentQuestion] === null}
-                    className="btn-primary py-2.5 px-6 text-sm disabled:opacity-40"
+                    className="btn-primary px-6 text-sm disabled:opacity-40"
                   >
                     {currentQuestion === 4 ? 'Ver resultado' : 'Próxima'}
                     <ArrowRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                {answers[currentQuestion] === null && (
+                  <p className="mt-2 text-center text-xs text-ink-muted">
+                    Escolha uma alternativa para avançar.
+                  </p>
+                )}
 
                 {/* Close */}
                 <button
                   onClick={closeDiagnostic}
-                  className="mt-4 w-full text-center text-xs text-ink-muted hover:text-ink"
+                  className="mt-3 w-full rounded-lg py-2 text-center text-xs text-ink-muted hover:bg-se-mist hover:text-ink"
                 >
                   Fechar
                 </button>

@@ -186,21 +186,21 @@ export function Permuta() {
     <div className="relative min-h-screen bg-se-mist">
       <NeuralBackground className="opacity-20 fixed inset-0" />
 
-      <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-12">
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-se-mist/85 px-6 py-4 backdrop-blur-md md:px-12 md:py-6">
         <button onClick={() => navigate('/')} className="transition hover:opacity-70">
           <Logo size="md" />
         </button>
         <div className="flex items-center gap-2">
           <button
             onClick={() => navigate('/minha-area')}
-            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
           >
             <User className="h-3.5 w-3.5" />
             Minha área
           </button>
           <button
             onClick={() => navigate('/protocolo')}
-            className="flex items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
+            className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-xs font-medium text-ink-soft backdrop-blur transition hover:border-se-violet/30 hover:text-ink"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Voltar
@@ -264,8 +264,18 @@ export function Permuta() {
               <p className="mt-1 text-xs text-ink-muted">5 perguntas • aproximadamente 1 minuto</p>
             </div>
 
-            <div className="mb-6">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-se-lavender">
+            <div
+              className="mb-6"
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={5}
+              aria-valuenow={currentQuestion + 1}
+              aria-label={`Pergunta ${currentQuestion + 1} de 5`}
+            >
+              <div className="flex items-center justify-between text-xs text-ink-muted">
+                <span>{currentQuestion + 1} de 5</span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-se-lavender">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-se-teal to-se-violet transition-all duration-500"
                   style={{ width: `${((currentQuestion + 1) / 5) * 100}%` }}
@@ -282,7 +292,7 @@ export function Permuta() {
                 <button
                   key={opt.value}
                   onClick={() => handleAnswer(opt.value)}
-                  className={`w-full rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                  className={`flex min-h-[48px] w-full items-center rounded-xl border px-4 py-3 text-left text-sm transition-all ${
                     answers[currentQuestion] === opt.value
                       ? 'border-se-violet bg-se-lavender text-ink'
                       : 'border-ink/10 bg-white text-ink-soft hover:border-se-violet/30'
@@ -293,23 +303,28 @@ export function Permuta() {
               ))}
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
+            <div className="mt-6 flex items-center justify-between gap-3">
               <button
                 onClick={handlePrev}
                 disabled={currentQuestion === 0}
-                className="flex items-center gap-1 text-sm text-ink-muted transition hover:text-ink disabled:opacity-30"
+                className="flex min-h-[44px] items-center gap-1 rounded-full px-3.5 text-sm text-ink-muted transition hover:text-ink disabled:opacity-30"
               >
                 <ArrowLeft className="h-4 w-4" /> Anterior
               </button>
               <button
                 onClick={handleNext}
                 disabled={answers[currentQuestion] === null}
-                className="btn-primary px-6 py-2.5 text-sm disabled:opacity-40"
+                className="btn-primary px-6 text-sm disabled:opacity-40"
               >
                 {currentQuestion === 4 ? 'Ver resultado' : 'Próxima'}
                 <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
+            {answers[currentQuestion] === null && (
+              <p className="mt-2 text-center text-xs text-ink-muted">
+                Escolha uma alternativa para avançar.
+              </p>
+            )}
           </div>
         )}
 
@@ -394,9 +409,9 @@ export function Permuta() {
                     <p>Jornada completa: <strong className="text-ink">R${fmtPrice(m === 'social' ? settings.payment_social_complete : settings.payment_integral_complete)}</strong></p>
                   </div>
                   <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-se-violet">
-                    <span className={`grid h-4 w-4 place-items-center rounded-full border-2 ${modality === m ? 'border-se-violet' : 'border-ink/20'}`}>
-                      {modality === m && <span className="h-2 w-2 rounded-full bg-se-violet" />}
-                    </span>
+                    <span className={`grid h-5 w-5 place-items-center rounded-full border-2 ${modality === m ? 'border-se-violet' : 'border-ink/20'}`}>
+                    {modality === m && <span className="h-2.5 w-2.5 rounded-full bg-se-violet" />}
+                  </span>
                     Selecionar
                   </div>
                 </button>

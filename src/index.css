@@ -29,10 +29,12 @@
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-se-teal to-se-violet px-8 py-4 text-sm font-semibold tracking-wide text-white uppercase transition-all duration-300 hover:shadow-lift hover:brightness-110 focus:outline-none focus:ring-4 focus:ring-se-violet/30 disabled:opacity-50 disabled:pointer-events-none;
+    min-height: 48px;
   }
 
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-white/70 px-8 py-4 text-sm font-semibold tracking-wide text-ink uppercase transition-all duration-300 hover:border-se-violet/40 hover:text-se-violet focus:outline-none focus:ring-4 focus:ring-se-violet/20;
+    min-height: 48px;
   }
 
   .card {
@@ -44,7 +46,8 @@
   }
 
   .input {
-    @apply w-full rounded-xl border border-ink/10 bg-white px-4 py-3 text-ink placeholder:text-ink-muted/60 transition-colors duration-200 focus:border-se-violet focus:outline-none focus:ring-4 focus:ring-se-violet/15;
+    @apply w-full rounded-xl border border-ink/10 bg-white px-4 py-3 text-ink placeholder:text-ink-muted/80 transition-colors duration-200 focus:border-se-violet focus:outline-none focus:ring-4 focus:ring-se-violet/15;
+    min-height: 48px;
   }
 }
 

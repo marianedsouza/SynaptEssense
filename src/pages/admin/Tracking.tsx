@@ -134,6 +134,18 @@ export function Tracking() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Testes feitos pela analista via /admin/preview?email=... entram marcados
+  // (detail.preview) e ficam fora dos painéis por padrão para não distorcer
+  // os números reais. O toggle "Incluir testes (preview)" os exibe.
+  const [includePreview, setIncludePreview] = useState(false)
+  const visibleEvents = useMemo(
+    () =>
+      includePreview
+        ? events
+        : events.filter((e) => (e.detail as Record<string, unknown> | null)?.preview !== true),
+    [events, includePreview],
+  )
+
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -188,7 +200,7 @@ export function Tracking() {
     let diagResult = 0
     let paymentClicks = 0
 
-    for (const e of events) {
+    for (const e of visibleEvents) {
       if (e.event === 'page_view') {
         visitors.add(e.visitor_id)
         pageViews++
@@ -204,21 +216,21 @@ export function Tracking() {
       diagResult,
       paymentClicks,
     }
-  }, [events])
+  }, [visibleEvents])
 
   const [funnelRef, setFunnelRef] = useState<'all' | 'direct' | string>('all')
 
   const funnelSources = useMemo(() => {
     const set = new Set<string>()
-    for (const e of events) if (e.ref) set.add(e.ref)
+    for (const e of visibleEvents) if (e.ref) set.add(e.ref)
     return Array.from(set).sort()
-  }, [events])
+  }, [visibleEvents])
 
   // Eventos recortados pela origem selecionada — base de todo o funil.
   const funnelEvents = useMemo(() => {
-    if (funnelRef === 'all') return events
-    return events.filter((e) => (e.ref ?? null) === (funnelRef === 'direct' ? null : funnelRef))
-  }, [events, funnelRef])
+    if (funnelRef === 'all') return visibleEvents
+    return visibleEvents.filter((e) => (e.ref ?? null) === (funnelRef === 'direct' ? null : funnelRef))
+  }, [visibleEvents, funnelRef])
 
   const funnel = useMemo(() => {
     const defs = FUNNEL_STAGES
@@ -337,7 +349,7 @@ export function Tracking() {
     const resultSet = new Set<string>() // quem concluiu
     let maxQuestion = 0
 
-    for (const e of events) {
+    for (const e of visibleEvents) {
       if (e.event === 'diagnostic_start' || e.event === 'diagnostic_resume') startSet.add(e.visitor_id)
       if (e.event === 'diagnostic_answer') {
         const q = (e.detail as { question?: number } | null)?.question ?? 0
@@ -372,7 +384,7 @@ export function Tracking() {
     const started = startSet.size
     const rate = started > 0 ? Math.min(100, Math.round((completed / started) * 100)) : 0
     return { started, completed, answeredTotal, total, rate, rows }
-  }, [events])
+  }, [visibleEvents])
 
   // Visitas e conversões por link de origem (?ref=)
   const byRef = useMemo(() => {
@@ -381,7 +393,7 @@ export function Tracking() {
       { visits: number; diagStart: number; emails: number; paymentClicks: number; last: string }
     >()
     const visitorsByRef = new Map<string, Set<string>>()
-    for (const e of events) {
+    for (const e of visibleEvents) {
       const key = e.ref || ''
       const row =
         map.get(key) ??
@@ -405,7 +417,7 @@ export function Tracking() {
         ...row,
       }))
       .sort((a, b) => b.visits - a.visits)
-  }, [events])
+  }, [visibleEvents])
 
   // Onde os usuários param: última página vista por sessão + métricas por página
   const pages = useMemo(() => {
@@ -423,7 +435,7 @@ export function Tracking() {
     const lastPathBySession = new Map<string, { path: string; at: string }>()
     const visitorsByPath = new Map<string, Set<string>>()
 
-    for (const e of events) {
+    for (const e of visibleEvents) {
       if (e.event !== 'page_view' && e.event !== 'page_leave') continue
       const row =
         map.get(e.path) ??
@@ -475,7 +487,7 @@ export function Tracking() {
         avgTime: row.timeCount > 0 ? Math.round(row.timeTotal / row.timeCount) : null,
       }))
       .sort((a, b) => b.views - a.views)
-  }, [events])
+  }, [visibleEvents])
 
   // Jornada recente por sessão
   const journeys = useMemo(() => {
@@ -483,7 +495,7 @@ export function Tracking() {
       string,
       { paths: string[]; emails: string[]; started: string; last: string }
     >()
-    for (const e of events) {
+    for (const e of visibleEvents) {
       const sid = e.session_id ?? e.visitor_id
       const row = map.get(sid) ?? { paths: [], emails: [], started: e.created_at, last: e.created_at }
       if (e.event === 'page_view') {
@@ -500,7 +512,7 @@ export function Tracking() {
     return Array.from(map.entries())
       .map(([sid, row]) => ({ sid, ...row }))
       .sort((a, b) => (a.last < b.last ? 1 : -1))
-  }, [events])
+  }, [visibleEvents])
 
   // Paginação da jornada recente
   const JOURNEY_PAGE_SIZE = 8
@@ -515,17 +527,31 @@ export function Tracking() {
   const emailCaptures = useMemo(() => {
     // Deduplica por e-mail (mantém a captura mais recente)
     const seen = new Set<string>()
-    const out: { id: string; email: string; ref: string | null; path: string; created_at: string }[] = []
-    for (let i = events.length - 1; i >= 0; i--) {
-      const e = events[i]
+    const out: {
+      id: string
+      email: string
+      ref: string | null
+      path: string
+      created_at: string
+      preview: boolean
+    }[] = []
+    for (let i = visibleEvents.length - 1; i >= 0; i--) {
+      const e = visibleEvents[i]
       if (e.event !== 'email_capture' && e.event !== 'identify') continue
       const email = String((e.detail as { email?: string } | null)?.email ?? '').toLowerCase()
       if (!email || seen.has(email)) continue
       seen.add(email)
-      out.push({ id: e.id, email, ref: e.ref, path: e.path, created_at: e.created_at })
+      out.push({
+        id: e.id,
+        email,
+        ref: e.ref,
+        path: e.path,
+        created_at: e.created_at,
+        preview: (e.detail as { preview?: boolean } | null)?.preview === true,
+      })
     }
     return out
-  }, [events])
+  }, [visibleEvents])
 
   // ─── Inteligência de leads: score de intenção por visitante ────────────────
   const leadIntel = useMemo(() => {
@@ -549,7 +575,7 @@ export function Tracking() {
       last: string
     }
     const map = new Map<string, V>()
-    for (const e of events) {
+    for (const e of visibleEvents) {
       let v = map.get(e.visitor_id)
       if (!v) {
         v = {
@@ -633,7 +659,7 @@ export function Tracking() {
         dv.n++; dv.conv += conv; byDevice.set(v.device, dv)
       }
     }
-    for (const e of events) if (e.event === 'email_capture' || e.event === 'payment_click') hours[new Date(e.created_at).getHours()]++
+    for (const e of visibleEvents) if (e.event === 'email_capture' || e.event === 'payment_click') hours[new Date(e.created_at).getHours()]++
 
     const best = (m: Map<string, { n: number; conv: number }>, minN: number) =>
       Array.from(m.entries())
@@ -658,7 +684,7 @@ export function Tracking() {
       cold: list.filter((v) => v.temp === 'frio').length,
       insights,
     }
-  }, [events])
+  }, [visibleEvents])
 
   return (
     <AdminLayout>
@@ -674,7 +700,16 @@ export function Tracking() {
             De onde vem cada visitante, onde ele para e o que faz antes de fechar a página.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-ink/10 bg-white px-3 py-1.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={includePreview}
+              onChange={(e) => setIncludePreview(e.target.checked)}
+              className="h-3.5 w-3.5 accent-se-violet"
+            />
+            Incluir testes (preview)
+          </label>
           <Calendar className="h-4 w-4 text-ink-muted" />
           <select
             value={period}
@@ -1028,7 +1063,14 @@ export function Tracking() {
                       className="flex items-center justify-between gap-3 border-b border-ink/5 px-5 py-3 last:border-b-0"
                     >
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium text-ink">{row.email}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium text-ink">{row.email}</span>
+                          {row.preview && (
+                            <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                              teste
+                            </span>
+                          )}
+                        </div>
                         <div className="mt-0.5 text-[11px] text-ink-muted">
                           {pathLabel(row.path)} · {refLabel(row.ref)}
                         </div>

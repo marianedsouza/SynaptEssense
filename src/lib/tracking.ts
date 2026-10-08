@@ -10,6 +10,7 @@ const QUEUE_KEY = 'synapt_track_queue'
 const IDENTITY_KEY = 'synapt_identity' // e-mail conhecido do visitante (identity stitching)
 const ATTR_KEY = 'synapt_attribution' // first-touch completo (UTMs, referrer, landing)
 const VISITS_KEY = 'synapt_visit_count'
+const PREVIEW_KEY = 'synapt_preview' // marca os eventos gerados pelo admin em /admin/preview?email=
 
 /** Eventos de alto valor: enviados imediatamente (não esperam o lote de 4s). */
 const CRITICAL_EVENTS = new Set<string>([
@@ -125,6 +126,31 @@ export function captureRef(search?: string): string | null {
 
 function currentRef(): string | null {
   return captureRef()
+}
+
+// ─── Modo preview do admin (testes da analista) ────────────────────────────
+// A rota /admin/preview permite à analista navegar como o paciente. Eventos
+// gerados aí são marcados com `preview: true` para não distorcer os números
+// reais do painel, e a marca se propaga para as páginas públicas visitadas
+// em sequência (protocolo, pagamento etc.) na mesma sessão.
+
+function isPreviewPath(path: string): boolean {
+  return path.startsWith('/admin/preview')
+}
+
+function storedPreview(): boolean {
+  return safeGet(PREVIEW_KEY, typeof sessionStorage !== 'undefined' ? sessionStorage : null) === '1'
+}
+
+let previewSession = storedPreview()
+
+function currentPreview(): boolean {
+  return previewSession
+}
+
+function setPreview(on: boolean): void {
+  previewSession = on
+  safeSet(PREVIEW_KEY, on ? '1' : '', typeof sessionStorage !== 'undefined' ? sessionStorage : null)
 }
 
 // ─── Atribuição inteligente (first-touch) ───────────────────────────────────
@@ -319,11 +345,15 @@ export function track(
 ): void {
   if (typeof window === 'undefined') return
   const path = opts?.path ?? window.location.pathname
-  if (path.startsWith('/admin')) return
+  const preview = isPreviewPath(path) || currentPreview()
+  if (!preview && path.startsWith('/admin')) return
+  if (preview) setPreview(true)
 
   const identity = getIdentity()
   const detail: Record<string, unknown> | undefined =
-    identity || opts?.detail ? { ...(identity ? { email: identity } : {}), ...opts?.detail } : undefined
+    identity || opts?.detail || preview
+      ? { ...(identity ? { email: identity } : {}), ...(opts?.detail ?? {}), ...(preview ? { preview: true } : {}) }
+      : undefined
 
   const row: QueuedEvent = {
     visitor_id: getVisitorId(),
@@ -412,8 +442,12 @@ export function enterPage(path?: string): void {
   // Evita page_view duplicado quando o efeito roda 2x (React StrictMode em dev).
   if (target === currentPath) return
   leaveCurrentPage()
-  // Fecha a página anterior mesmo ao entrar em /admin (senão o page_leave fica preso).
-  if (target.startsWith('/admin')) return
+  // Fecha a página anterior mesmo ao entrar em qualquer /admin (senão o
+  // page_leave fica preso). Rotas /admin fora do preview não geram tracking.
+  if (target.startsWith('/admin') && !isPreviewPath(target)) {
+    setPreview(false)
+    return
+  }
   currentPath = target
   pageStartedAt = Date.now()
   maxScrollDepth = 0

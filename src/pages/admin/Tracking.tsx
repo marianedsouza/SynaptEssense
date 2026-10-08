@@ -506,8 +506,17 @@ export function Tracking() {
     return Array.from(map.entries())
       .map(([sid, row]) => ({ sid, ...row }))
       .sort((a, b) => (a.last < b.last ? 1 : -1))
-      .slice(0, 30)
   }, [events])
+
+  // Paginação da jornada recente
+  const JOURNEY_PAGE_SIZE = 8
+  const [journeyPage, setJourneyPage] = useState(1)
+  const journeyTotalPages = Math.max(1, Math.ceil(journeys.length / JOURNEY_PAGE_SIZE))
+  const journeySafePage = Math.min(journeyPage, journeyTotalPages)
+  const pagedJourneys = journeys.slice(
+    (journeySafePage - 1) * JOURNEY_PAGE_SIZE,
+    journeySafePage * JOURNEY_PAGE_SIZE,
+  )
 
   const emailCaptures = useMemo(() => {
     // Deduplica por e-mail (mantém a captura mais recente)
@@ -1262,33 +1271,66 @@ export function Tracking() {
                 Sem visitas no período.
               </div>
             ) : (
-              <div className="divide-y divide-ink/5">
-                {journeys.map((j) => (
-                  <div key={j.sid} className="flex flex-wrap items-center gap-2 px-5 py-3">
-                    <span className="w-28 shrink-0 text-[11px] text-ink-muted">
-                      {fmtDateTime(j.last)}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {j.paths.map((p, i) => (
-                        <span key={`${j.sid}-${i}`} className="inline-flex items-center gap-1.5">
-                          {i > 0 && <span className="text-ink-muted">→</span>}
-                          <span className="rounded-full bg-se-mist px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">
-                            {p}
+              <>
+                <div className="divide-y divide-ink/5">
+                  {pagedJourneys.map((j) => (
+                    <div key={j.sid} className="flex flex-wrap items-center gap-2 px-5 py-3">
+                      <span className="w-28 shrink-0 text-[11px] text-ink-muted">
+                        {fmtDateTime(j.last)}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {j.paths.map((p, i) => (
+                          <span key={`${j.sid}-${i}`} className="inline-flex items-center gap-1.5">
+                            {i > 0 && <span className="text-ink-muted">→</span>}
+                            <span className="rounded-full bg-se-mist px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">
+                              {p}
+                            </span>
                           </span>
+                        ))}
+                      </div>
+                      {j.emails.map((email) => (
+                        <span
+                          key={`${j.sid}-mail`}
+                          className="ml-auto rounded-full bg-se-teal/10 px-2.5 py-0.5 text-[11px] font-semibold text-se-teal"
+                        >
+                          {email}
                         </span>
                       ))}
                     </div>
-                    {j.emails.map((email) => (
-                      <span
-                        key={`${j.sid}-mail`}
-                        className="ml-auto rounded-full bg-se-teal/10 px-2.5 py-0.5 text-[11px] font-semibold text-se-teal"
-                      >
-                        {email}
-                      </span>
-                    ))}
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-ink/5 px-5 py-3 text-xs text-ink-muted">
+                  <span>
+                    {journeys.length === 0
+                      ? '—'
+                      : `Mostrando ${(journeySafePage - 1) * JOURNEY_PAGE_SIZE + 1}–${Math.min(
+                          journeySafePage * JOURNEY_PAGE_SIZE,
+                          journeys.length,
+                        )} de ${fmtInt(journeys.length)} sessões`}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={journeySafePage <= 1}
+                      onClick={() => setJourneyPage((p) => Math.max(1, p - 1))}
+                      className="rounded-lg border border-ink/10 bg-white px-3 py-1 text-xs text-ink hover:border-se-violet focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <span className="tabular-nums">
+                      {journeySafePage} / {journeyTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={journeySafePage >= journeyTotalPages}
+                      onClick={() => setJourneyPage((p) => Math.min(journeyTotalPages, p + 1))}
+                      className="rounded-lg border border-ink/10 bg-white px-3 py-1 text-xs text-ink hover:border-se-violet focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Próxima
+                    </button>
                   </div>
-                ))}
-              </div>
+                </div>
+              </>
             )}
           </div>
         </>

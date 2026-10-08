@@ -4,6 +4,8 @@ import {
   ArrowDownRight,
   Calendar,
   Filter,
+  Flame,
+  Lightbulb,
   MousePointerClick,
   ScrollText,
   User,
@@ -107,20 +109,37 @@ export function Tracking() {
       setError(null)
       const since = new Date()
       since.setDate(since.getDate() - Number(period))
-      const { data, error: err } = await supabase
-        .from('tracking_events')
-        .select('*')
-        .gte('created_at', since.toISOString())
-        .order('created_at', { ascending: true })
-        .limit(5000)
+      // O Supabase devolve no máx. 1000 linhas por requisição. Antes a consulta era
+      // ascendente + limit, então só vinham os eventos MAIS ANTIGOS e os e-mails
+      // recentes sumiam do painel. Agora pagina do mais novo para o mais antigo.
+      const PAGE = 1000
+      const MAX = 30000
+      const all: TrackingEvent[] = []
+      let err: { message: string } | null = null
+      for (let from = 0; from < MAX; from += PAGE) {
+        const { data, error: e } = await supabase
+          .from('tracking_events')
+          .select('*')
+          .gte('created_at', since.toISOString())
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE - 1)
+        if (cancelled) return
+        if (e) {
+          err = e
+          break
+        }
+        const rows = (data as TrackingEvent[]) ?? []
+        all.push(...rows)
+        if (rows.length < PAGE) break
+      }
       if (cancelled) return
-      if (err) {
+      if (err && all.length === 0) {
         setError(
           'Não foi possível carregar os eventos. Confirme que o arquivo supabase/add_tracking.sql foi executado no SQL Editor.',
         )
         setEvents([])
       } else {
-        setEvents((data as TrackingEvent[]) ?? [])
+        setEvents(all.reverse())
       }
       setLoading(false)
     }
@@ -411,16 +430,151 @@ export function Tracking() {
   }, [events])
 
   const emailCaptures = useMemo(() => {
-    return events
-      .filter((e) => e.event === 'email_capture')
-      .map((e) => ({
-        id: e.id,
-        email: ((e.detail as { email?: string } | null)?.email ?? '') as string,
-        ref: e.ref,
-        path: e.path,
-        created_at: e.created_at,
-      }))
-      .reverse()
+    // Deduplica por e-mail (mantém a captura mais recente)
+    const seen = new Set<string>()
+    const out: { id: string; email: string; ref: string | null; path: string; created_at: string }[] = []
+    for (let i = events.length - 1; i >= 0; i--) {
+      const e = events[i]
+      if (e.event !== 'email_capture' && e.event !== 'identify') continue
+      const email = String((e.detail as { email?: string } | null)?.email ?? '').toLowerCase()
+      if (!email || seen.has(email)) continue
+      seen.add(email)
+      out.push({ id: e.id, email, ref: e.ref, path: e.path, created_at: e.created_at })
+    }
+    return out
+  }, [events])
+
+  // ─── Inteligência de leads: score de intenção por visitante ────────────────
+  const leadIntel = useMemo(() => {
+    interface V {
+      visitor: string
+      email: string | null
+      score: number
+      sessions: Set<string>
+      pages: number
+      timeMs: number
+      maxScroll: number
+      answers: number
+      started: boolean
+      finished: boolean
+      recommendation: string | null
+      payment: boolean
+      abandonedAt: number | null
+      channel: string
+      device: string | null
+      ref: string | null
+      last: string
+    }
+    const map = new Map<string, V>()
+    for (const e of events) {
+      let v = map.get(e.visitor_id)
+      if (!v) {
+        v = {
+          visitor: e.visitor_id, email: null, score: 0, sessions: new Set(), pages: 0, timeMs: 0,
+          maxScroll: 0, answers: 0, started: false, finished: false, recommendation: null,
+          payment: false, abandonedAt: null, channel: e.ref ? 'Link compartilhado' : 'Direto',
+          device: null, ref: e.ref, last: e.created_at,
+        }
+        map.set(e.visitor_id, v)
+      }
+      const d = (e.detail ?? {}) as Record<string, unknown>
+      if (typeof d.email === 'string' && d.email) v.email = d.email.toLowerCase()
+      if (e.session_id) v.sessions.add(e.session_id)
+      if (e.created_at > v.last) v.last = e.created_at
+      if (d.session_start) {
+        if (typeof d.channel === 'string') v.channel = d.channel
+        if (typeof d.device === 'string') v.device = d.device
+      }
+      switch (e.event) {
+        case 'page_view': v.pages++; break
+        case 'page_leave':
+          v.timeMs += e.time_on_page_ms ?? 0
+          v.maxScroll = Math.max(v.maxScroll, e.scroll_depth ?? 0)
+          break
+        case 'diagnostic_start': case 'diagnostic_resume': v.started = true; break
+        case 'diagnostic_answer': v.answers++; break
+        case 'diagnostic_abandon': v.abandonedAt = (d.at_question as number) ?? null; break
+        case 'diagnostic_result':
+          v.finished = true
+          v.abandonedAt = null
+          if (typeof d.recommendation === 'string') v.recommendation = d.recommendation
+          break
+        case 'payment_click': v.payment = true; break
+      }
+    }
+
+    const now = Date.now()
+    const list = Array.from(map.values()).map((v) => {
+      // Pesos: comportamento de compra > identificação > engajamento
+      let s = 0
+      s += Math.min(v.pages, 8) * 2
+      s += Math.min(Math.round(v.timeMs / 60000), 10) * 2
+      s += v.maxScroll >= 75 ? 6 : v.maxScroll >= 50 ? 3 : 0
+      s += v.sessions.size > 1 ? Math.min(v.sessions.size - 1, 3) * 6 : 0
+      s += v.started ? 8 : 0
+      s += Math.min(v.answers, 5) * 2
+      s += v.finished ? 15 : 0
+      s += v.email ? 15 : 0
+      s += v.payment ? 25 : 0
+      s += v.recommendation === 'integral' ? 6 : v.recommendation === 'transition' ? 3 : 0
+      // Recência: decai após 3 dias sem atividade
+      const days = (now - new Date(v.last).getTime()) / 86400000
+      if (days > 3) s = Math.round(s * Math.max(0.4, 1 - (days - 3) / 30))
+      const score = Math.min(100, s)
+      const temp: 'quente' | 'morno' | 'frio' = score >= 55 ? 'quente' : score >= 28 ? 'morno' : 'frio'
+
+      // Próxima melhor ação
+      let action = 'Nutrir com conteúdo'
+      if (v.payment) action = 'Clicou no pagamento — contatar hoje para fechar'
+      else if (v.finished && v.email) action = `Enviar proposta (${v.recommendation ?? 'indicação'})`
+      else if (v.abandonedAt && v.email) action = `Lembrete: parou na pergunta ${v.abandonedAt}`
+      else if (v.started && v.email) action = 'Convidar para concluir o diagnóstico'
+      else if (v.sessions.size > 1 && !v.email) action = 'Visitante recorrente — reforçar captura de e-mail'
+      return { ...v, sessions: v.sessions.size, score, temp, action }
+    })
+
+    const identified = list.filter((v) => v.email).sort((a, b) => b.score - a.score)
+    const hotAnon = list.filter((v) => !v.email && v.temp !== 'frio').length
+
+    // Insights automáticos
+    const insights: string[] = []
+    const byChannel = new Map<string, { n: number; conv: number }>()
+    const byDevice = new Map<string, { n: number; conv: number }>()
+    const hours = Array(24).fill(0) as number[]
+    for (const v of list) {
+      const conv = v.email || v.payment ? 1 : 0
+      const c = byChannel.get(v.channel) ?? { n: 0, conv: 0 }
+      c.n++; c.conv += conv; byChannel.set(v.channel, c)
+      if (v.device) {
+        const dv = byDevice.get(v.device) ?? { n: 0, conv: 0 }
+        dv.n++; dv.conv += conv; byDevice.set(v.device, dv)
+      }
+    }
+    for (const e of events) if (e.event === 'email_capture' || e.event === 'payment_click') hours[new Date(e.created_at).getHours()]++
+
+    const best = (m: Map<string, { n: number; conv: number }>, minN: number) =>
+      Array.from(m.entries())
+        .filter(([, x]) => x.n >= minN)
+        .map(([k, x]) => ({ k, rate: Math.round((x.conv / x.n) * 100), n: x.n }))
+        .sort((a, b) => b.rate - a.rate)
+    const ch = best(byChannel, 3)
+    if (ch.length > 0 && ch[0].rate > 0) insights.push(`Canal que mais converte: ${ch[0].k} (${ch[0].rate}% viram lead, ${ch[0].n} visitantes).`)
+    if (ch.length > 1 && ch[ch.length - 1].n >= 10 && ch[ch.length - 1].rate === 0) insights.push(`${ch[ch.length - 1].k} traz tráfego (${ch[ch.length - 1].n}) mas nenhum lead — revise a mensagem/oferta desse canal.`)
+    const dv = best(byDevice, 3)
+    if (dv.length > 1 && dv[0].rate - dv[dv.length - 1].rate >= 10) insights.push(`Conversão em ${dv[0].k} (${dv[0].rate}%) supera ${dv[dv.length - 1].k} (${dv[dv.length - 1].rate}%) — teste a experiência em ${dv[dv.length - 1].k}.`)
+    const peak = hours.indexOf(Math.max(...hours))
+    if (hours[peak] >= 2) insights.push(`Pico de conversões por volta das ${peak}h — bom horário para publicar e enviar e-mails.`)
+    const abandonEmail = identified.filter((v) => v.abandonedAt && !v.finished).length
+    if (abandonEmail > 0) insights.push(`${abandonEmail} lead(s) com e-mail abandonaram o diagnóstico — recupere com lembrete.`)
+    if (hotAnon > 0) insights.push(`${hotAnon} visitante(s) engajado(s) ainda sem e-mail — oportunidade de captura.`)
+
+    return {
+      identified,
+      hot: list.filter((v) => v.temp === 'quente').length,
+      warm: list.filter((v) => v.temp === 'morno').length,
+      cold: list.filter((v) => v.temp === 'frio').length,
+      insights,
+    }
   }, [events])
 
   return (
@@ -497,7 +651,7 @@ export function Tracking() {
                 E-mails capturados
               </div>
               <div className="mt-1 font-display text-2xl font-semibold text-se-violet">
-                {fmtInt(stats.emails)}
+                {fmtInt(emailCaptures.length)}
               </div>
             </div>
             <div className="card p-4">
@@ -508,6 +662,94 @@ export function Tracking() {
                 {fmtInt(stats.paymentClicks)}
               </div>
             </div>
+          </div>
+
+          {/* ─── INTELIGÊNCIA DE LEADS ─── */}
+          <div className="card mt-6 overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/5 px-5 py-4">
+              <div>
+                <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
+                  <Flame className="h-4 w-4 text-se-violet" /> Leads inteligentes
+                </h2>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  Score de intenção (0–100) por visitante: engajamento, retorno, diagnóstico,
+                  e-mail e clique no pagamento, com decaimento por inatividade.
+                </p>
+              </div>
+              <div className="flex gap-2 text-xs font-semibold">
+                <span className="rounded-full bg-red-50 px-3 py-1 text-red-600">🔥 {leadIntel.hot} quentes</span>
+                <span className="rounded-full bg-amber-50 px-3 py-1 text-amber-600">{leadIntel.warm} mornos</span>
+                <span className="rounded-full bg-se-mist px-3 py-1 text-ink-muted">{leadIntel.cold} frios</span>
+              </div>
+            </div>
+
+            {leadIntel.insights.length > 0 && (
+              <div className="grid gap-2 border-b border-ink/5 bg-se-lavender/20 px-5 py-4 sm:grid-cols-2">
+                {leadIntel.insights.map((txt) => (
+                  <div key={txt} className="flex items-start gap-2 text-xs text-ink-soft">
+                    <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-se-violet" />
+                    {txt}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {leadIntel.identified.length === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-ink-muted">
+                Nenhum lead identificado por e-mail no período.
+              </div>
+            ) : (
+              <div className="max-h-[460px] overflow-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
+                      <th className="px-5 py-3 font-semibold">Lead</th>
+                      <th className="px-3 py-3 font-semibold">Score</th>
+                      <th className="px-3 py-3 font-semibold">Origem</th>
+                      <th className="px-3 py-3 font-semibold">Jornada</th>
+                      <th className="px-5 py-3 font-semibold">Próxima ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leadIntel.identified.map((v) => (
+                      <tr key={v.visitor} className="border-b border-ink/5 last:border-b-0">
+                        <td className="px-5 py-3">
+                          <a href={`mailto:${v.email}`} className="font-medium text-ink hover:text-se-violet">
+                            {v.email}
+                          </a>
+                          <div className="text-[11px] text-ink-muted">última atividade {fmtDateTime(v.last)}</div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                              v.temp === 'quente'
+                                ? 'bg-red-50 text-red-600'
+                                : v.temp === 'morno'
+                                  ? 'bg-amber-50 text-amber-600'
+                                  : 'bg-se-mist text-ink-muted'
+                            }`}
+                          >
+                            {v.score}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-xs text-ink-soft">
+                          {v.channel}
+                          {v.ref ? ` · ${v.ref}` : ''}
+                          {v.device ? <div className="text-[11px] text-ink-muted">{v.device}</div> : null}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-ink-soft">
+                          {v.sessions} visita(s) · {v.pages} pág. · {fmtDuration(v.timeMs)}
+                          <div className="text-[11px] text-ink-muted">
+                            {v.payment ? 'clicou pagamento' : v.finished ? `diagnóstico: ${v.recommendation ?? 'concluído'}` : v.started ? `diagnóstico ${v.answers}/5` : 'não iniciou diagnóstico'}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-xs font-medium text-se-violet">{v.action}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* ─── FUNIL DE CONVERSÃO ─── */}

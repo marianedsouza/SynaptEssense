@@ -4,7 +4,7 @@ import { ArrowRight, ArrowLeft, Check, Brain, Heart, Sparkles, Flame, Zap, Sun, 
 import { Logo } from '../../components/Logo'
 import { NeuralBackground } from '../../components/NeuralBackground'
 import { useSettings } from '../../context/SettingsContext'
-import { track } from '../../lib/tracking'
+import { identify, track } from '../../lib/tracking'
 import { createNotification } from '../../lib/notifications'
 
 // ─── Diagnostic Questions ───────────────────────────────────────────────────
@@ -218,6 +218,14 @@ export function Protocol() {
       return
     }
     track('email_capture', { detail: { email } })
+    identify(email, { source: 'diagnostic' })
+    createNotification({
+      email,
+      type: 'info',
+      title: 'Bem-vindo(a) ao SynaptEssence360®',
+      message: 'Recebemos seu e-mail. Conclua o diagnóstico para receber sua indicação personalizada.',
+      link_url: '/protocolo?diagnostico=1',
+    })
     markEmailStepDone()
     try {
       localStorage.setItem(DIAG_EMAIL_KEY, email)

@@ -7,6 +7,17 @@ const VISITOR_KEY = 'synapt_visitor_id'
 const SESSION_KEY = 'synapt_session_id'
 const REF_KEY = 'synapt_ref'
 const QUEUE_KEY = 'synapt_track_queue'
+const IDENTITY_KEY = 'synapt_identity' // e-mail conhecido do visitante (identity stitching)
+const ATTR_KEY = 'synapt_attribution' // first-touch completo (UTMs, referrer, landing)
+const VISITS_KEY = 'synapt_visit_count'
+
+/** Eventos de alto valor: enviados imediatamente (não esperam o lote de 4s). */
+const CRITICAL_EVENTS = new Set<string>([
+  'email_capture',
+  'diagnostic_result',
+  'payment_click',
+  'diagnostic_abandon',
+])
 
 export type TrackEventType =
   | 'page_view'
@@ -20,6 +31,9 @@ export type TrackEventType =
   | 'email_capture'
   | 'payment_click'
   | 'diag_reminder_sent'
+  | 'scroll_milestone'
+  | 'cta_click'
+  | 'identify'
 
 interface QueuedEvent {
   visitor_id: string
@@ -113,6 +127,110 @@ function currentRef(): string | null {
   return captureRef()
 }
 
+// ─── Atribuição inteligente (first-touch) ───────────────────────────────────
+
+export interface Attribution {
+  source: string | null
+  medium: string | null
+  campaign: string | null
+  content: string | null
+  term: string | null
+  referrer: string | null
+  channel: string
+  landing: string
+  device: 'mobile' | 'tablet' | 'desktop'
+  first_seen: string
+}
+
+function detectDevice(): Attribution['device'] {
+  try {
+    const ua = navigator.userAgent
+    if (/iPad|Tablet/i.test(ua)) return 'tablet'
+    if (/Mobi|Android|iPhone/i.test(ua)) return 'mobile'
+  } catch {
+    // ignora
+  }
+  return 'desktop'
+}
+
+/** Classifica o canal de aquisição a partir de UTMs + referrer. */
+function classifyChannel(source: string | null, medium: string | null, referrer: string | null): string {
+  const s = (source || '').toLowerCase()
+  const m = (medium || '').toLowerCase()
+  const r = (referrer || '').toLowerCase()
+  if (/cpc|ppc|paid|ads/.test(m)) return 'Pago'
+  if (/email|newsletter/.test(m) || /email|newsletter/.test(s)) return 'E-mail'
+  if (/whats|wa\.me/.test(s + r)) return 'WhatsApp'
+  if (/insta|facebook|fb|tiktok|linkedin|youtube|twitter|t\.co|threads|pinterest/.test(s + r)) return 'Social'
+  if (/google|bing|yahoo|duckduckgo|ecosia/.test(r)) return 'Busca orgânica'
+  if (s) return 'Link compartilhado'
+  if (r) return 'Indicação (site)'
+  return 'Direto'
+}
+
+export function getAttribution(): Attribution {
+  const stored = safeGet(ATTR_KEY)
+  if (stored) {
+    try {
+      return JSON.parse(stored) as Attribution
+    } catch {
+      // recalcula
+    }
+  }
+  let params: URLSearchParams
+  try {
+    params = new URLSearchParams(window.location.search)
+  } catch {
+    params = new URLSearchParams()
+  }
+  let referrer: string | null = null
+  try {
+    if (document.referrer) {
+      const host = new URL(document.referrer).hostname
+      if (host && host !== window.location.hostname) referrer = host
+    }
+  } catch {
+    referrer = null
+  }
+  const source = params.get('utm_source') || params.get('ref') || null
+  const medium = params.get('utm_medium')
+  const attr: Attribution = {
+    source,
+    medium,
+    campaign: params.get('utm_campaign'),
+    content: params.get('utm_content'),
+    term: params.get('utm_term'),
+    referrer,
+    channel: classifyChannel(source, medium, referrer),
+    landing: window.location.pathname,
+    device: detectDevice(),
+    first_seen: new Date().toISOString(),
+  }
+  safeSet(ATTR_KEY, JSON.stringify(attr))
+  return attr
+}
+
+// ─── Identidade (liga visitante anônimo ao e-mail) ──────────────────────────
+
+export function getIdentity(): string | null {
+  return safeGet(IDENTITY_KEY)
+}
+
+/** Associa o visitante a um e-mail. Eventos seguintes carregam o e-mail. */
+export function identify(email: string, traits?: Record<string, unknown>): void {
+  const clean = email.trim().toLowerCase()
+  if (!clean) return
+  const already = getIdentity() === clean
+  safeSet(IDENTITY_KEY, clean)
+  if (!already) track('identify', { detail: { email: clean, ...traits } })
+}
+
+function bumpVisitCount(): number {
+  const n = Number(safeGet(VISITS_KEY) || '0') + 1
+  safeSet(VISITS_KEY, String(n))
+  return n
+}
+
 function readQueue(): QueuedEvent[] {
   const raw = safeGet(QUEUE_KEY)
   if (!raw) return []
@@ -175,6 +293,8 @@ async function flushQueue(keepalive = false): Promise<void> {
     }
   } finally {
     sending = false
+    // eventos que chegaram durante o envio (ex.: e-mail capturado) não ficam presos
+    if (!keepalive && getQueue().length > 0) scheduleFlush()
   }
 }
 
@@ -201,13 +321,17 @@ export function track(
   const path = opts?.path ?? window.location.pathname
   if (path.startsWith('/admin')) return
 
+  const identity = getIdentity()
+  const detail: Record<string, unknown> | undefined =
+    identity || opts?.detail ? { ...(identity ? { email: identity } : {}), ...opts?.detail } : undefined
+
   const row: QueuedEvent = {
     visitor_id: getVisitorId(),
     session_id: getSessionId(),
     ref: currentRef(),
     path,
     event,
-    detail: opts?.detail,
+    detail,
     scroll_depth: opts?.scrollDepth,
     time_on_page_ms: opts?.timeOnPageMs,
     created_at: new Date().toISOString(),
@@ -215,7 +339,8 @@ export function track(
 
   const q = getQueue()
   q.push(row)
-  if (q.length > 40) {
+  if (q.length > 40 || CRITICAL_EVENTS.has(event)) {
+    persistQueue()
     void flushQueue()
   } else {
     persistQueue()
@@ -242,11 +367,24 @@ function computeScrollDepth(): number {
   }
 }
 
+let milestonesHit = new Set<number>()
+
 function attachScrollTracking(): void {
   if (scrollListener) window.removeEventListener('scroll', scrollListener)
+  milestonesHit = new Set<number>()
   const onScroll = () => {
     const depth = computeScrollDepth()
     if (depth > maxScrollDepth) maxScrollDepth = depth
+    // Marcos de leitura (50/90%) — sinal forte de interesse na página
+    for (const m of [50, 90]) {
+      if (depth >= m && !milestonesHit.has(m) && currentPath) {
+        milestonesHit.add(m)
+        // ignora páginas curtas que já carregam "100%"
+        if (Date.now() - pageStartedAt > 1500) {
+          track('scroll_milestone', { path: currentPath, scrollDepth: m })
+        }
+      }
+    }
   }
   scrollListener = onScroll
   window.addEventListener('scroll', onScroll, { passive: true })
@@ -279,7 +417,18 @@ export function enterPage(path?: string): void {
   currentPath = target
   pageStartedAt = Date.now()
   maxScrollDepth = 0
-  track('page_view', { path: target })
+  // Primeira página da sessão carrega a atribuição completa + nº da visita
+  const isNewSession = !sessionSeen
+  sessionSeen = true
+  if (isNewSession) {
+    const attr = getAttribution()
+    track('page_view', {
+      path: target,
+      detail: { ...attr, visit_number: bumpVisitCount(), session_start: true },
+    })
+  } else {
+    track('page_view', { path: target })
+  }
   attachScrollTracking()
   scheduleFlush()
 }
@@ -295,6 +444,7 @@ function resumeCurrentPage(): void {
 }
 
 let installed = false
+let sessionSeen = false
 
 /** Instala flush automático ao sair da página (uma única vez). */
 export function initTracking(): void {
@@ -306,6 +456,18 @@ export function initTracking(): void {
     void flushQueue(true)
   }
   window.addEventListener('pagehide', onHide)
+  // Reenvia eventos que ficaram na fila (offline / aba fechada) assim que possível
+  window.addEventListener('online', () => void flushQueue())
+  setTimeout(() => void flushQueue(), 1500)
+  // Cliques em CTAs: qualquer elemento com data-track="nome" é registrado
+  document.addEventListener(
+    'click',
+    (e) => {
+      const el = (e.target as HTMLElement | null)?.closest?.('[data-track]') as HTMLElement | null
+      if (el) track('cta_click', { detail: { cta: el.dataset.track } })
+    },
+    { capture: true },
+  )
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       onHide()

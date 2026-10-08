@@ -28,32 +28,37 @@ export interface NotificationInput {
 }
 
 export async function fetchNotifications(email: string): Promise<AppNotification[]> {
+  // ilike = comparação sem diferenciar maiúsculas (o e-mail do login pode vir
+  // com caixa diferente do e-mail informado no diagnóstico).
   const { data, error } = await supabase
     .from('notifications')
     .select('*')
-    .eq('email', email)
+    .ilike('email', email.trim())
     .order('created_at', { ascending: false })
     .limit(50)
   if (error) throw new Error(error.message)
   return (data as AppNotification[]) ?? []
 }
 
-export async function createNotification(
-  input: NotificationInput,
-): Promise<AppNotification | null> {
-  const { data, error } = await supabase
-    .from('notifications')
-    .insert({
-      email: input.email,
-      type: input.type,
-      title: input.title,
-      message: input.message ?? '',
-      link_url: input.link_url ?? null,
-    })
-    .select('*')
-    .single()
-  if (error) return null
-  return (data as AppNotification) ?? null
+/**
+ * Cria uma notificação.
+ * IMPORTANTE: não usar `.select()` aqui. Visitantes anônimos têm permissão de
+ * INSERT mas não de SELECT (RLS); pedir a linha de volta fazia o PostgREST
+ * rejeitar a inserção inteira — por isso nenhuma notificação era criada.
+ */
+export async function createNotification(input: NotificationInput): Promise<boolean> {
+  const { error } = await supabase.from('notifications').insert({
+    email: input.email.trim().toLowerCase(),
+    type: input.type,
+    title: input.title,
+    message: input.message ?? '',
+    link_url: input.link_url ?? null,
+  })
+  if (error) {
+    console.warn('[notifications] falha ao criar notificação:', error.message)
+    return false
+  }
+  return true
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
@@ -84,7 +89,7 @@ export function subscribeNotifications(
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
-        filter: `email=eq.${email}`,
+        filter: `email=eq.${email.trim().toLowerCase()}`,
       },
       (payload) => onInsert(payload.new as AppNotification),
     )

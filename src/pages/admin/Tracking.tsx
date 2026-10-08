@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   ArrowDownRight,
-  ArrowUpRight,
   Calendar,
   Filter,
   Flame,
@@ -126,6 +125,14 @@ const FUNNEL_ACTIONS: Record<string, string> = {
   start: 'reforce a proposta e o CTA na página inicial para mais visitantes iniciarem o diagnóstico.',
   result: 'simplifique o questionário ou o passo de e-mail — quem inicia não está concluindo.',
   payment: 'aproxime o CTA de pagamento da tela de resultado — concluem mas não clicam em pagar.',
+}
+
+// Nomes curtos para os rótulos das colunas do funil
+const FUNNEL_SHORT: Record<string, string> = {
+  visitors: 'Visitantes',
+  start: 'Iniciaram',
+  result: 'Concluíram',
+  payment: 'Pagamento',
 }
 
 export function Tracking() {
@@ -929,61 +936,65 @@ export function Tracking() {
                   </div>
                 )}
 
-                {/* Funil: barra central proporcional — largura = % dos visitantes */}
-                <div className="mx-auto flex max-w-2xl flex-col items-center pb-1">
-                  {funnel.map((s, i) => {
-                    const width = Math.max(12, Math.min(100, s.conversion))
-                    const last = i === funnel.length - 1
-                    const worst = s.key === worstDropKey || s.key === worstRateKey
-                    return (
-                      <div key={s.key} className="flex w-full flex-col items-center">
-                        {i > 0 && (
-                          <div className="my-1.5 flex h-5 items-center" aria-hidden>
-                            {s.gain > 0 ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-se-teal/10 px-2.5 py-0.5 text-[10px] font-semibold text-se-teal">
-                                <ArrowUpRight className="h-3 w-3" /> +{fmtInt(s.gain)} chegaram direto
-                              </span>
-                            ) : s.drop > 0 ? (
-                              <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                                  worst ? 'bg-red-50 text-red-600' : 'bg-se-mist text-ink-muted'
-                                }`}
-                              >
-                                <ArrowDownRight className="h-3 w-3" />
-                                {fmtInt(s.drop)} {s.drop === 1 ? 'desistiu' : 'desistiram'} · −
-                                {s.dropRate}%
-                              </span>
-                            ) : (
-                              <span className="rounded-full bg-se-mist/60 px-2.5 py-0.5 text-[10px] text-ink-muted">
-                                sem perda
-                              </span>
-                            )}
+                {/* Funil em colunas: altura = % dos visitantes */}
+                <div className="px-1 pb-1">
+                  <div className="flex gap-1.5">
+                    {funnel.map((s, i) => {
+                      const last = i === funnel.length - 1
+                      const worst = s.key === worstDropKey || s.key === worstRateKey
+                      const h = s.conversion
+                      return (
+                        <div key={s.key} className="flex flex-1 flex-col items-center gap-1">
+                          <div className="text-center leading-none">
+                            <div className="font-display text-sm font-semibold text-ink">
+                              {fmtInt(s.count)}
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-ink-muted">{s.conversion}%</div>
                           </div>
-                        )}
-                        <div
-                          className={`flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-3 text-white ${
-                            last
-                              ? 'bg-gradient-to-r from-se-teal to-se-violet'
-                              : 'bg-se-violet/80'
-                          }`}
-                          style={{ width: `${width}%` }}
-                        >
-                          <span className="max-w-[58%] truncate text-[11px] font-semibold">
-                            {s.label}
-                          </span>
-                          <span className="font-display text-sm font-semibold">{fmtInt(s.count)}</span>
-                          <span className="text-[10px] opacity-80">{s.conversion}%</span>
+                          <div className="flex h-28 w-full items-end" title={`${s.label}: ${fmtInt(s.count)} (${s.conversion}% dos visitantes)`}>
+                            <div
+                              className={`w-full rounded-t-md ${
+                                last
+                                  ? 'bg-gradient-to-t from-se-teal to-se-violet'
+                                  : worst
+                                    ? 'bg-gradient-to-t from-red-500 to-orange-300'
+                                    : 'bg-se-violet/70'
+                              }`}
+                              style={{ height: `${Math.max(h, 4)}%` }}
+                            />
+                          </div>
+                          <div className="max-w-full text-center">
+                            <div className="truncate text-[10px] font-medium leading-tight text-ink-soft">
+                              {FUNNEL_SHORT[s.key] ?? s.label}
+                            </div>
+                            {i > 0 &&
+                              (s.gain > 0 ? (
+                                <div className="mt-0.5 truncate text-[9px] font-semibold text-se-teal">
+                                  +{fmtInt(s.gain)} direto
+                                </div>
+                              ) : s.drop > 0 ? (
+                                <div
+                                  className={`mt-0.5 truncate text-[9px] font-semibold ${
+                                    worst ? 'text-red-600' : 'text-ink-muted'
+                                  }`}
+                                >
+                                  −{fmtInt(s.drop)} · {s.dropRate}%
+                                </div>
+                              ) : (
+                                <div className="mt-0.5 text-[9px] text-ink-muted/60">—</div>
+                              ))}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
             <div className="border-t border-ink/5 px-5 py-3 text-xs text-ink-muted">
-              Largura de cada barra = % dos visitantes. O rótulo entre as barras indica o que
-              aconteceu ali: perda (<b>−N desistiram</b>) ou chegada direta (<b>+N</b>, sem passar
-              pela etapa anterior). Filtre a origem para comparar campanhas.
+              Altura de cada coluna = % dos visitantes que chegaram à etapa. Sob o rótulo, a perda
+              em relação à etapa anterior (<b>−N · X%</b>) ou chegada direta (<b>+N</b>). Filtre a
+              origem para comparar campanhas.
             </div>
           </div>
 

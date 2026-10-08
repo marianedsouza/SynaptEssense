@@ -833,7 +833,18 @@ export function Tracking() {
                           {v.sessions} visita(s) · {v.pages} pág. · {fmtDuration(v.timeMs)}
                           <div className="text-[11px] text-ink-muted">
                             {v.payment ? 'clicou pagamento' : v.finished ? `diagnóstico: ${v.recommendation ?? 'concluído'}` : v.started ? `diagnóstico ${v.answers}/5` : 'não iniciou diagnóstico'}
-                      {/* ─── FUNIL DE CONVERSÃO ─── */}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-xs font-medium text-se-violet">{v.action}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ─── FUNIL DE CONVERSÃO ─── */}
           <div className="card mt-6 overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/5 px-5 py-4">
               <div>

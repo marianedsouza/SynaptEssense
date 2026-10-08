@@ -96,6 +96,37 @@ function refLabel(ref: string | null) {
   return ref || 'Acesso direto'
 }
 
+// ─── Funil de conversão ────────────────────────────────────────────────────
+// `requires` = índices das etapas anteriores que a etapa exige (apenas quando
+// presentes nos dados do visitante). Assim uma etapa opcional — como pular o
+// passo de e-mail — não zera as etapas seguintes, que era o bug que deixava os
+// percentuais do funil sempre em 0.
+type FunnelStage = {
+  key: string
+  label: string
+  requires: number[]
+  match: (e: TrackingEvent) => boolean
+}
+
+const FUNNEL_STAGES: FunnelStage[] = [
+  { key: 'visitors', label: 'Visitantes', requires: [], match: (e) => e.event === 'page_view' },
+  {
+    key: 'start',
+    label: 'Iniciaram o diagnóstico',
+    requires: [0],
+    match: (e) => e.event === 'diagnostic_start' || e.event === 'diagnostic_resume',
+  },
+  { key: 'result', label: 'Concluíram o diagnóstico', requires: [1], match: (e) => e.event === 'diagnostic_result' },
+  { key: 'payment', label: 'Clicaram no pagamento', requires: [1], match: (e) => e.event === 'payment_click' },
+]
+
+// Próxima ação sugerida conforme o gargalo de conversão detectado
+const FUNNEL_ACTIONS: Record<string, string> = {
+  start: 'reforce a proposta e o CTA na página inicial para mais visitantes iniciarem o diagnóstico.',
+  result: 'simplifique o questionário ou o passo de e-mail — quem inicia não está concluindo.',
+  payment: 'aproxime o CTA de pagamento da tela de resultado — concluem mas não clicam em pagar.',
+}
+
 export function Tracking() {
   const [period, setPeriod] = useState<Period>('30')
   const [events, setEvents] = useState<TrackingEvent[]>([])
@@ -154,23 +185,22 @@ export function Tracking() {
     let pageViews = 0
     let diagStart = 0
     let diagResult = 0
-    let emails = 0
     let paymentClicks = 0
 
     for (const e of events) {
-      visitors.add(e.visitor_id)
-      if (e.event === 'page_view') pageViews++
-      else if (e.event === 'diagnostic_start') diagStart++
+      if (e.event === 'page_view') {
+        visitors.add(e.visitor_id)
+        pageViews++
+      } else if (e.event === 'diagnostic_start' || e.event === 'diagnostic_resume') diagStart++
       else if (e.event === 'diagnostic_result') diagResult++
-      else if (e.event === 'email_capture') emails++
       else if (e.event === 'payment_click') paymentClicks++
     }
     return {
+      // mesma base do topo do funil (quem teve page_view) para os números baterem
       visitors: visitors.size,
       pageViews,
       diagStart,
       diagResult,
-      emails,
       paymentClicks,
     }
   }, [events])
@@ -183,35 +213,25 @@ export function Tracking() {
     return Array.from(set).sort()
   }, [events])
 
-  // Funil de conversão (item 6) — lógica aninhada:
-  // cada etapa só conta quem completou TODAS as anteriores no período (funil
-  // aberto, por visitante único). Assim as barras nunca sobem e as taxas
-  // medem o que realmente importa: de X que chegaram, quantos seguiram.
+  // Eventos recortados pela origem selecionada — base de todo o funil.
   const funnelEvents = useMemo(() => {
     if (funnelRef === 'all') return events
     return events.filter((e) => (e.ref ?? null) === (funnelRef === 'direct' ? null : funnelRef))
   }, [events, funnelRef])
 
   const funnel = useMemo(() => {
-    const defs = [
-      { key: 'visitors', label: 'Visitantes', match: (e: TrackingEvent) => e.event === 'page_view' },
-      { key: 'start', label: 'Iniciaram o diagnóstico', match: (e: TrackingEvent) => e.event === 'diagnostic_start' || e.event === 'diagnostic_resume' },
-      { key: 'email', label: 'Deixaram o e-mail', match: (e: TrackingEvent) => e.event === 'email_capture' },
-      { key: 'result', label: 'Concluíram o diagnóstico', match: (e: TrackingEvent) => e.event === 'diagnostic_result' },
-      { key: 'payment', label: 'Clicaram no pagamento', match: (e: TrackingEvent) => e.event === 'payment_click' },
-    ]
+    const defs = FUNNEL_STAGES
     // Primeira ocorrência de cada etapa por visitante (MIN por etapa)
     const firstByVisitor = new Map<string, (number | null)[]>()
     for (const e of funnelEvents) {
-      const d = defs.find((x) => x.match(e))
-      if (!d) continue
+      const i = defs.findIndex((x) => x.match(e))
+      if (i === -1) continue
       let arr = firstByVisitor.get(e.visitor_id)
       if (!arr) {
         arr = Array(defs.length).fill(null)
         firstByVisitor.set(e.visitor_id, arr)
       }
       const t = new Date(e.created_at).getTime()
-      const i = defs.indexOf(d)
       if (arr[i] === null || t < (arr[i] as number)) arr[i] = t
     }
 
@@ -219,11 +239,18 @@ export function Tracking() {
     const times = Array.from({ length: defs.length }, () => []) as number[][]
     for (const arr of firstByVisitor.values()) {
       if (arr[0] === null) continue // entra no funil só quem visitou o site (topo)
-      for (let k = 0; k < defs.length && arr[k] !== null; k++) counts[k]++
+      // Etapa alcançada: tem o evento e as etapas obrigatórias presentes
+      // aconteceram antes (cronologia). Etapas ausentes não bloqueiam.
+      const reached = defs.map((d, k) => {
+        if (arr[k] === null) return false
+        return d.requires.every((r) => arr[r] === null || (arr[r] as number) <= (arr[k] as number))
+      })
+      for (let k = 0; k < defs.length; k++) if (reached[k]) counts[k]++
       for (let k = 1; k < defs.length; k++) {
-        if (arr[k - 1] !== null && arr[k] !== null) {
-          const dt = (arr[k] as number) - (arr[k - 1] as number)
-          if (dt > 0) times[k].push(dt)
+        const base = defs[k].requires[0]
+        if (reached[k] && base !== undefined && arr[base] !== null) {
+          const dt = (arr[k] as number) - (arr[base] as number)
+          if (dt >= 0) times[k].push(dt)
         }
       }
     }
@@ -232,20 +259,34 @@ export function Tracking() {
     return defs.map((d, i) => {
       const prev = i === 0 ? null : counts[i - 1]
       const conversion = Math.round((counts[i] / top) * 100)
-      const stepConv = prev && prev > 0 ? Math.round((counts[i] / prev) * 100) : null
-      const drop = prev != null ? prev - counts[i] : null
-      const dropRate = drop !== null && prev && prev > 0 ? Math.round((drop / prev) * 100) : null
+      const stepConv = prev !== null && prev > 0 ? Math.round((counts[i] / prev) * 100) : null
+      const delta = prev !== null ? counts[i] - prev : null
+      const drop = delta !== null && delta < 0 ? -delta : 0
+      const gain = delta !== null && delta > 0 ? delta : 0
+      const dropRate = prev !== null && prev > 0 && drop > 0 ? Math.round((drop / prev) * 100) : null
+      const base = d.requires[0]
+      const baseLabel = base !== undefined ? defs[base].label : null
       const medianMs = i === 0 ? null : median(times[i])
-      return { key: d.key, label: d.label, count: counts[i], conversion, stepConv, drop, dropRate, medianMs }
+      return { key: d.key, label: d.label, count: counts[i], conversion, stepConv, drop, dropRate, gain, medianMs, baseLabel }
     })
   }, [funnelEvents])
+
+  // E-mails capturados na mesma base do funil (respeita o filtro de origem)
+  const emailCaptured = useMemo(() => {
+    const set = new Set<string>()
+    for (const e of funnelEvents) if (e.event === 'email_capture') set.add(e.visitor_id)
+    return set.size
+  }, [funnelEvents])
+
+  const emailPct =
+    funnel[1].count > 0 ? Math.min(100, Math.round((emailCaptured / funnel[1].count) * 100)) : null
 
   // Gargalo com maior perda absoluta (impacto) e com menor conversão (taxa)
   const worstDropKey = useMemo(() => {
     let key: string | null = null
     let max = 0
     for (const s of funnel) {
-      if (s.drop !== null && s.drop > max) {
+      if (s.drop > max) {
         max = s.drop
         key = s.key
       }
@@ -265,16 +306,40 @@ export function Tracking() {
     return key
   }, [funnel])
 
-  // Abandono por pergunta do questionário (item 5)
+  // Leitura inteligente: frases geradas a partir dos números do funil
+  const funnelReads = useMemo(() => {
+    const out: string[] = []
+    const top = funnel[0].count
+    if (top === 0) return out
+    const pay = funnel[funnel.length - 1]
+    out.push(`${pay.conversion}% dos visitantes clicaram no pagamento (${fmtInt(pay.count)} de ${fmtInt(top)}).`)
+    const gi = worstRateKey ? funnel.findIndex((s) => s.key === worstRateKey) : -1
+    if (gi > 0) {
+      const s = funnel[gi]
+      out.push(
+        `Maior gargalo: só ${s.stepConv}% seguem de "${funnel[gi - 1].label}" para "${s.label}"${
+          s.drop > 0 ? ` — ${fmtInt(s.drop)} pessoas perdidas` : ''
+        }.`,
+      )
+      const action = FUNNEL_ACTIONS[s.key]
+      if (action) out.push(`Ação sugerida: ${action}`)
+    }
+    if (pay.medianMs !== null) out.push(`Tempo mediano do início ao clique no pagamento: ${fmtSpan(pay.medianMs)}.`)
+    return out.slice(0, 4)
+  }, [funnel, worstRateKey])
+
+  // Abandono por pergunta do questionário
   const questionFunnel = useMemo(() => {
     const startSet = new Set<string>() // quem iniciou
     const answersByVisitor = new Map<string, number[]>() // perguntas respondidas por visitante
     const resultSet = new Set<string>() // quem concluiu
+    let maxQuestion = 0
 
     for (const e of events) {
       if (e.event === 'diagnostic_start' || e.event === 'diagnostic_resume') startSet.add(e.visitor_id)
       if (e.event === 'diagnostic_answer') {
         const q = (e.detail as { question?: number } | null)?.question ?? 0
+        if (q > maxQuestion) maxQuestion = q
         const arr = answersByVisitor.get(e.visitor_id) ?? []
         arr.push(q)
         answersByVisitor.set(e.visitor_id, arr)
@@ -282,22 +347,29 @@ export function Tracking() {
       if (e.event === 'diagnostic_result') resultSet.add(e.visitor_id)
     }
 
+    // Nº de perguntas descoberto dos dados (não hardcoded).
+    const total = Math.max(maxQuestion, 1)
     // Por pergunta: quantos responderam e quantos NÃO seguiram para a próxima nem concluíram.
     const rows = []
-    for (let i = 1; i <= 5; i++) {
+    let answeredTotal = 0
+    for (let i = 1; i <= total; i++) {
       let answered = 0
       let dropped = 0
       for (const [visitor, qs] of answersByVisitor) {
         if (!qs.includes(i)) continue
         answered++
-        const wentFurther = i < 5 ? qs.includes(i + 1) : false
-        if (!wentFurther && !resultSet.has(visitor)) dropped++
+        const wentFurther = (i < total ? qs.includes(i + 1) : false) || resultSet.has(visitor)
+        if (!wentFurther) dropped++
       }
-      rows.push({ question: i, answered, dropped })
+      answeredTotal += answered
+      // % de quem RESpondeu esta pergunta e parou — base correta, nunca > 100%
+      const pct = answered > 0 ? Math.round((dropped / answered) * 100) : 0
+      rows.push({ question: i, answered, dropped, pct })
     }
     const completed = resultSet.size
     const started = startSet.size
-    return { started, completed, rows }
+    const rate = started > 0 ? Math.min(100, Math.round((completed / started) * 100)) : 0
+    return { started, completed, answeredTotal, total, rate, rows }
   }, [events])
 
   // Visitas e conversões por link de origem (?ref=)
@@ -313,7 +385,7 @@ export function Tracking() {
         map.get(key) ??
         { visits: 0, diagStart: 0, emails: 0, paymentClicks: 0, last: e.created_at }
       if (e.event === 'page_view') row.visits++
-      else if (e.event === 'diagnostic_start') row.diagStart++
+      else if (e.event === 'diagnostic_start' || e.event === 'diagnostic_resume') row.diagStart++
       else if (e.event === 'email_capture') row.emails++
       else if (e.event === 'payment_click') row.paymentClicks++
       if (e.created_at > row.last) row.last = e.created_at
@@ -643,6 +715,8 @@ export function Tracking() {
                 {fmtInt(stats.diagStart)}
                 <span className="ml-1 text-sm font-medium text-ink-muted">
                   → {fmtInt(stats.diagResult)} concluídos
+                  {stats.diagStart > 0 &&
+                    ` (${Math.min(100, Math.round((stats.diagResult / stats.diagStart) * 100))}%)`}
                 </span>
               </div>
             </div>
@@ -760,8 +834,8 @@ export function Tracking() {
                   Funil de conversão
                 </h2>
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  Cada etapa conta quem completou todas as anteriores (funil aberto,
-                  visitante único, no período selecionado).
+                  Visitante único no período. Etapa opcional pulada (ex.: e-mail) não zera as
+                  próximas.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -786,67 +860,77 @@ export function Tracking() {
               </div>
             ) : (
               <div className="px-5 py-5">
-                {/* Insights */}
-                <div className="mb-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-                      Conversão geral
-                    </div>
-                    <div className="mt-1 font-display text-2xl font-semibold text-se-violet">
+                {/* Resumo em chips */}
+                <div className="mb-4 flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-ink/5 bg-se-mist/60 px-3 py-1.5 text-ink-muted">
+                    Conversão geral{' '}
+                    <b className="ml-1 font-display text-sm text-se-violet">
                       {funnel[funnel.length - 1].conversion}%
-                    </div>
-                    <div className="mt-1 text-[11px] text-ink-muted">
-                      {fmtInt(funnel[funnel.length - 1].count)} chegaram ao pagamento
-                    </div>
-                  </div>
+                    </b>
+                    <span className="ml-1">
+                      ({fmtInt(funnel[funnel.length - 1].count)}/{fmtInt(funnel[0].count)})
+                    </span>
+                  </span>
                   {worstRateKey && (() => {
                     const gi = funnel.findIndex((s) => s.key === worstRateKey)
+                    if (gi <= 0) return null
                     return (
-                      <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-                          Maior gargalo (taxa)
-                        </div>
-                        <div className="mt-1 font-display text-lg font-semibold text-red-600">
-                          {funnel[gi].stepConv}%
-                        </div>
-                        <div className="mt-1 text-[11px] text-ink-muted">
-                          só seguiram de "{funnel[gi - 1]?.label}" para "{funnel[gi].label}"
-                        </div>
-                      </div>
+                      <span className="rounded-full border border-ink/5 bg-se-mist/60 px-3 py-1.5 text-ink-muted">
+                        Gargalo{' '}
+                        <b className="ml-1 font-display text-sm text-red-600">{funnel[gi].stepConv}%</b>
+                        <span className="ml-1">
+                          {funnel[gi - 1].label} → {funnel[gi].label}
+                        </span>
+                      </span>
                     )
                   })()}
                   {worstDropKey && (() => {
                     const di = funnel.findIndex((s) => s.key === worstDropKey)
+                    if (di <= 0) return null
                     return (
-                      <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-                          Maior perda (pessoas)
-                        </div>
-                        <div className="mt-1 font-display text-lg font-semibold text-ink">
-                          −{fmtInt(funnel[di].drop ?? 0)}
-                        </div>
-                        <div className="mt-1 text-[11px] text-ink-muted">
-                          entre "{funnel[di - 1]?.label}" e "{funnel[di].label}"
-                        </div>
-                      </div>
+                      <span className="rounded-full border border-ink/5 bg-se-mist/60 px-3 py-1.5 text-ink-muted">
+                        Maior perda{' '}
+                        <b className="ml-1 font-display text-sm text-ink">−{fmtInt(funnel[di].drop)}</b>
+                        <span className="ml-1">
+                          {funnel[di - 1].label} → {funnel[di].label}
+                        </span>
+                      </span>
                     )
                   })()}
-                  <div className="rounded-2xl border border-ink/5 bg-se-mist/50 p-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">
-                      Tempo mediano até o pagamento
-                    </div>
-                    <div className="mt-1 font-display text-lg font-semibold text-ink">
+                  <span className="rounded-full border border-ink/5 bg-se-mist/60 px-3 py-1.5 text-ink-muted">
+                    Até o pagamento{' '}
+                    <b className="ml-1 font-display text-sm text-ink">
                       {fmtSpan(funnel[funnel.length - 1].medianMs)}
-                    </div>
-                    <div className="mt-1 text-[11px] text-ink-muted">
-                      do início ao clique no pagamento
-                    </div>
-                  </div>
+                    </b>
+                  </span>
+                  {emailPct !== null && (
+                    <span className="rounded-full border border-ink/5 bg-se-mist/60 px-3 py-1.5 text-ink-muted">
+                      E-mails{' '}
+                      <b className="ml-1 font-display text-sm text-se-teal">
+                        {fmtInt(emailCaptured)} · {emailPct}%
+                      </b>
+                    </span>
+                  )}
                 </div>
+
+                {/* Leitura inteligente */}
+                {funnelReads.length > 0 && (
+                  <div className="mb-4 grid gap-2 sm:grid-cols-2">
+                    {funnelReads.map((txt) => (
+                      <div
+                        key={txt}
+                        className="flex items-start gap-2 rounded-xl bg-se-lavender/30 px-3 py-2 text-xs text-ink-soft"
+                      >
+                        <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-se-violet" />
+                        <span>{txt}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="space-y-2.5">
                   {funnel.map((s, i) => {
-                    const width = Math.max(6, s.conversion)
+                    const width = Math.max(6, Math.min(100, s.conversion))
                     const isWorstAbs = s.key === worstDropKey
                     const isWorstRate = s.key === worstRateKey
                     return (
@@ -877,39 +961,48 @@ export function Tracking() {
                               </span>
                             ) : (
                               <>
-                                <span className="inline-flex items-center gap-0.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-ink">
-                                  {s.stepConv !== null ? `${s.stepConv}%` : '—'}
+                                <span
+                                  className={`inline-flex items-center gap-0.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                    s.gain > 0 ? 'bg-se-teal/10 text-se-teal' : 'bg-white text-ink'
+                                  }`}
+                                >
+                                  {s.gain > 0 ? `+${fmtInt(s.gain)}` : s.stepConv !== null ? `${s.stepConv}%` : '—'}
                                 </span>
-                                <div className="mt-0.5 text-[10px] text-ink-muted">dos anteriores</div>
+                                <div className="mt-0.5 text-[10px] text-ink-muted">
+                                  {s.gain > 0 ? 'chegaram direto' : 'dos anteriores'}
+                                </div>
                               </>
                             )}
                           </div>
                         </div>
                         {i > 0 && (
                           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 pl-[5.5rem]">
-                            <span className="text-xs text-ink-muted">
-                              {s.drop !== null && s.drop > 0 ? (
-                                <>
-                                  <strong className={isWorstAbs ? 'text-red-600' : 'text-se-violet'}>
-                                    −{fmtInt(s.drop)}
-                                  </strong>{' '}
-                                  {s.drop === 1 ? 'desistiu' : 'desistiram'} (−{s.dropRate}%)
-                                  {isWorstAbs && (
-                                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                      <ArrowDownRight className="h-2.5 w-2.5" /> Maior desistência
-                                    </span>
-                                  )}
-                                </>
-                              ) : (
-                                'Sem queda'
-                              )}
-                            </span>
-                            {s.medianMs !== null && (
+                            {s.drop > 0 ? (
+                              <span className="text-xs text-ink-muted">
+                                <strong className={isWorstAbs ? 'text-red-600' : 'text-se-violet'}>
+                                  −{fmtInt(s.drop)}
+                                </strong>{' '}
+                                {s.drop === 1 ? 'desistiu' : 'desistiram'} (−{s.dropRate}%)
+                                {isWorstAbs && (
+                                  <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                    <ArrowDownRight className="h-2.5 w-2.5" /> Maior desistência
+                                  </span>
+                                )}
+                              </span>
+                            ) : s.gain > 0 ? (
+                              <span className="text-xs text-ink-muted">
+                                <strong className="text-se-teal">+{fmtInt(s.gain)}</strong> sem passar
+                                por “{funnel[i - 1].label}”
+                              </span>
+                            ) : (
+                              <span className="text-xs text-ink-muted">Sem queda</span>
+                            )}
+                            {s.medianMs !== null && s.baseLabel && (
                               <span className="text-[11px] text-ink-muted">
-                                Mediana de {fmtSpan(s.medianMs)} até a próxima etapa
+                                Mediana de {fmtSpan(s.medianMs)} desde “{s.baseLabel}”
                               </span>
                             )}
-                            {isWorstRate && i > 0 && (
+                            {isWorstRate && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
                                 Gargalo de conversão
                               </span>
@@ -923,9 +1016,9 @@ export function Tracking() {
               </div>
             )}
             <div className="border-t border-ink/5 px-5 py-3 text-xs text-ink-muted">
-              Lógica: cada visitante conta 1× apenas se percorreu <strong>todas</strong> as etapas
-              anteriores até a barra (funil aberto, no período). Barra = % sobre o topo. Badge à
-              direita = conversão sobre a etapa anterior. Use o filtro de origem para comparar campanhas.
+              Barra = % sobre os visitantes. Badge à direita = conversão da etapa anterior
+              (<b>+N</b> = chegaram direto, sem passar pela etapa anterior). Filtre a origem para
+              comparar campanhas.
             </div>
           </div>
 
@@ -1083,80 +1176,98 @@ export function Tracking() {
                 Abandono no questionário
               </h2>
               <p className="mt-0.5 text-xs text-ink-muted">
-                Quantas pessoas chegaram a cada pergunta e quantas desistiram antes de
-                avançar. Visita com maior desistência vira prioridade de revisão.
+                % de quem respondeu a pergunta e não avançou. A pergunta com maior desistência
+                vira prioridade de revisão.
               </p>
             </div>
-            {questionFunnel.started === 0 ? (
+            {questionFunnel.answeredTotal === 0 ? (
               <div className="px-5 py-10 text-center text-sm text-ink-muted">
-                Nenhum diagnóstico iniciado no período.
+                Nenhuma pergunta respondida no período.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
-                      <th className="px-5 py-3 font-semibold">Pergunta</th>
-                      <th className="px-3 py-3 font-semibold">Responderam</th>
-                      <th className="px-3 py-3 font-semibold">Desistiram antes da próxima</th>
-                      <th className="px-5 py-3 font-semibold">Barra de desistência</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      // destaca a pergunta com MAIOR desistência
-                      const maxDropped = Math.max(...questionFunnel.rows.map((r) => r.dropped), 0)
-                      return questionFunnel.rows.map((row) => {
-                        const pct = questionFunnel.started > 0 ? Math.round((row.dropped / questionFunnel.started) * 100) : 0
-                        const worst = maxDropped > 0 && row.dropped === maxDropped
-                        return (
-                          <tr key={row.question} className="border-b border-ink/5 last:border-b-0">
-                            <td className="px-5 py-3">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-ink">Pergunta {row.question}</span>
-                                {worst && (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
-                                    <Filter className="h-2.5 w-2.5" /> Maior desistência
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-3 py-3 text-ink-soft">{fmtInt(row.answered)}</td>
-                            <td className="px-3 py-3 text-ink-soft">
-                              <span className="font-semibold text-se-violet">{fmtInt(row.dropped)}</span>
-                              <span className="ml-1 text-xs text-ink-muted">({pct}%)</span>
-                            </td>
-                            <td className="px-5 py-3">
-                              <div className="h-2 w-40 overflow-hidden rounded-full bg-se-mist">
-                                <div
-                                  className={`h-full rounded-full ${worst ? 'bg-red-400' : 'bg-se-violet/50'}`}
-                                  style={{ width: `${Math.max(row.dropped > 0 ? 6 : 0, pct)}%` }}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })
-                    })()}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t border-ink/5">
-                      <td className="px-5 py-3 text-xs font-medium text-ink">
-                        Iniciaram: {fmtInt(questionFunnel.started)}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-ink-muted">Concluíram: {fmtInt(questionFunnel.completed)}</td>
-                      <td className="px-3 py-3 text-xs text-ink-muted">
-                        Taxa de conclusão:{' '}
-                        {questionFunnel.started > 0
-                          ? Math.round((questionFunnel.completed / questionFunnel.started) * 100)
-                          : 0}
-                        %
-                      </td>
-                      <td className="px-5 py-3" />
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              <>
+                {(() => {
+                  const worst = questionFunnel.rows.reduce<{ pct: number; question: number } | null>(
+                    (acc, r) => (r.pct > 0 && (!acc || r.pct > acc.pct) ? { pct: r.pct, question: r.question } : acc),
+                    null,
+                  )
+                  if (!worst) return null
+                  return (
+                    <div className="flex items-start gap-2 border-b border-ink/5 bg-se-lavender/30 px-5 py-3 text-xs text-ink-soft">
+                      <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-se-violet" />
+                      <span>
+                        <b>Pergunta {worst.question}</b> tem a maior desistência ({worst.pct}% de
+                        quem respondeu) — revise o enunciado/expectativa dela primeiro.{' '}
+                        {questionFunnel.rate < 100 &&
+                          `Só ${questionFunnel.rate}% dos iniciados concluem o diagnóstico.`}
+                      </span>
+                    </div>
+                  )
+                })()}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-ink/5 text-[11px] uppercase tracking-wide text-ink-muted">
+                        <th className="px-5 py-3 font-semibold">Pergunta</th>
+                        <th className="px-3 py-3 font-semibold">Responderam</th>
+                        <th className="px-3 py-3 font-semibold">Desistiram</th>
+                        <th className="px-5 py-3 font-semibold">Barra de desistência</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        // destaca a pergunta com MAIOR desistência
+                        const maxDropped = Math.max(...questionFunnel.rows.map((r) => r.dropped), 0)
+                        return questionFunnel.rows.map((row) => {
+                          const pct = Math.min(100, row.pct)
+                          const worst = maxDropped > 0 && row.dropped === maxDropped
+                          return (
+                            <tr key={row.question} className="border-b border-ink/5 last:border-b-0">
+                              <td className="px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-ink">Pergunta {row.question}</span>
+                                  {worst && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                                      <Filter className="h-2.5 w-2.5" /> Maior desistência
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-3 text-ink-soft">{fmtInt(row.answered)}</td>
+                              <td className="px-3 py-3 text-ink-soft">
+                                <span className="font-semibold text-se-violet">{fmtInt(row.dropped)}</span>
+                                <span className="ml-1 text-xs text-ink-muted">({pct}%)</span>
+                              </td>
+                              <td className="px-5 py-3">
+                                <div className="h-2 w-40 overflow-hidden rounded-full bg-se-mist">
+                                  <div
+                                    className={`h-full rounded-full ${worst ? 'bg-red-400' : 'bg-se-violet/50'}`}
+                                    style={{ width: `${Math.max(row.dropped > 0 ? 6 : 0, pct)}%` }}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      })()}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-ink/5">
+                        <td className="px-5 py-3 text-xs font-medium text-ink">
+                          Iniciaram: {fmtInt(questionFunnel.started)}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-ink-muted">
+                          Concluíram: {fmtInt(questionFunnel.completed)}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-ink-muted">
+                          Taxa de conclusão: {questionFunnel.rate}%
+                        </td>
+                        <td className="px-5 py-3" />
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </>
             )}
           </div>
 
